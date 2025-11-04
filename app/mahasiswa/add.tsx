@@ -71,7 +71,8 @@ export default function AddMahasiswaScreen() {
    */
   const handleSelectProdi = (prodi: Prodi) => {
     // Set nama_prodi sebagai jurusan di form data
-    setFormData({ ...formData, jurusan: prodi.nama_prodi });
+    // Pastikan selalu string dengan fallback
+    setFormData({ ...formData, jurusan: prodi.nama_prodi || '' });
     // Tutup modal setelah memilih
     setShowProdiModal(false);
   };
@@ -149,62 +150,50 @@ export default function AddMahasiswaScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      {/* Header halaman: tombol back, judul, dan placeholder untuk balance layout */}
       <View style={styles.header}>
-        {/* Tombol untuk kembali ke halaman sebelumnya */}
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        {/* Judul halaman di tengah */}
         <ThemedText type="title" style={styles.title}>
           Tambah Mahasiswa
         </ThemedText>
-        {/* Placeholder untuk balance layout (sama dengan width tombol back) */}
         <View style={styles.placeholder} />
       </View>
 
-      {/* ScrollView untuk form yang bisa di-scroll jika terlalu panjang */}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.form}>
-          {/* Input Group: NIM */}
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>NIM *</ThemedText>
             <TextInput
               style={styles.input}
               placeholder="Masukkan NIM"
-              value={formData.nim}
-              onChangeText={(text) => setFormData({ ...formData, nim: text })} // Update state nim saat user mengetik
-              keyboardType="numeric" // Keyboard numeric untuk input angka
+              value={formData.nim || ''}
+              onChangeText={(text) => setFormData({ ...formData, nim: text })}
+              keyboardType="numeric"
             />
           </View>
 
-          {/* Input Group: Nama Lengkap */}
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Nama Lengkap *</ThemedText>
             <TextInput
               style={styles.input}
               placeholder="Masukkan nama lengkap"
-              value={formData.nama}
-              onChangeText={(text) => setFormData({ ...formData, nama: text })} // Update state nama saat user mengetik
+              value={formData.nama || ''}
+              onChangeText={(text) => setFormData({ ...formData, nama: text })}
             />
           </View>
 
-          {/* Input Group: Jurusan/Prodi - Menggunakan dropdown untuk memilih dari data prodi */}
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Jurusan/Prodi *</ThemedText>
-            {/* TouchableOpacity digunakan sebagai dropdown button */}
             <TouchableOpacity
               style={styles.input}
-              onPress={() => setShowProdiModal(true)} // Buka modal saat diklik
-              activeOpacity={0.7}> {/* Opacity saat ditekan */}
-              {/* Tampilkan nama jurusan yang dipilih atau placeholder */}
+              onPress={() => setShowProdiModal(true)}
+              activeOpacity={0.7}>
               <ThemedText style={[styles.inputText, !formData.jurusan && styles.placeholderText]}>
-                {formData.jurusan || 'Pilih jurusan/prodi'} {/* Tampilkan placeholder jika belum dipilih */}
+                {formData.jurusan || 'Pilih jurusan/prodi'}
               </ThemedText>
-              {/* Ikon chevron-down untuk indikator dropdown */}
               <Ionicons name="chevron-down" size={20} color="#666" style={styles.dropdownIcon} />
             </TouchableOpacity>
-            {/* Pesan hint jika belum ada data prodi */}
             {prodiList.length === 0 && !loadingProdi && (
               <ThemedText style={styles.hintText}>
                 Belum ada data prodi. Silakan tambahkan prodi terlebih dahulu.
@@ -212,61 +201,50 @@ export default function AddMahasiswaScreen() {
             )}
           </View>
 
-          {/* Input Group: Semester */}
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Semester *</ThemedText>
             <TextInput
               style={styles.input}
               placeholder="Masukkan semester (1-14)"
-              value={formData.semester}
-              onChangeText={(text) => setFormData({ ...formData, semester: text })} // Update state semester saat user mengetik
-              keyboardType="numeric" // Keyboard numeric untuk input angka
+              value={formData.semester || ''}
+              onChangeText={(text) => setFormData({ ...formData, semester: text })}
+              keyboardType="numeric"
             />
           </View>
 
-          {/* Input Group: Email */}
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Email *</ThemedText>
             <TextInput
               style={styles.input}
               placeholder="Masukkan email"
-              value={formData.email}
-              onChangeText={(text) => setFormData({ ...formData, email: text })} // Update state email saat user mengetik
-              keyboardType="email-address" // Keyboard khusus email
-              autoCapitalize="none" // Tidak auto capitalize untuk email
+              value={formData.email || ''}
+              onChangeText={(text) => setFormData({ ...formData, email: text })}
+              keyboardType="email-address"
+              autoCapitalize="none"
             />
           </View>
-
-          {/* Tombol Submit untuk menyimpan data */}
           <TouchableOpacity
-            style={[styles.submitButton, loading && styles.submitButtonDisabled]} // Tambahkan style disabled saat loading
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
             onPress={handleSubmit}
-            disabled={loading}> {/* Disable tombol saat sedang loading */}
+            disabled={loading}>
             {loading ? (
-              // Tampilkan loading indicator saat sedang menyimpan
               <ActivityIndicator color="#FFF" />
             ) : (
-              // Tampilkan teks "Simpan" saat tidak loading
               <ThemedText style={styles.submitButtonText}>Simpan</ThemedText>
             )}
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Modal untuk memilih prodi dari dropdown */}
       <Modal
-        visible={showProdiModal} // Kontrol visibility modal
-        transparent={true} // Modal transparan dengan overlay
-        animationType="slide" // Animasi slide dari bawah
-        onRequestClose={() => setShowProdiModal(false)}> {/* Handle back button Android */}
-        {/* Overlay background transparan */}
+        visible={showProdiModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowProdiModal(false)}>
         <View style={styles.modalOverlay}>
-          {/* Container konten modal */}
           <View style={styles.modalContent}>
-            {/* Header modal: judul dan tombol close */}
             <View style={styles.modalHeader}>
               <ThemedText style={styles.modalTitle}>Pilih Jurusan/Prodi</ThemedText>
-              {/* Tombol untuk menutup modal */}
               <TouchableOpacity
                 onPress={() => setShowProdiModal(false)}
                 style={styles.modalCloseButton}>
@@ -274,14 +252,12 @@ export default function AddMahasiswaScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Tampilkan loading indicator jika sedang memuat data prodi */}
             {loadingProdi ? (
               <View style={styles.modalLoadingContainer}>
                 <ActivityIndicator size="large" color="#4A90E2" />
                 <ThemedText style={styles.modalLoadingText}>Memuat data prodi...</ThemedText>
               </View>
             ) : prodiList.length === 0 ? (
-              /* Tampilkan empty state jika tidak ada data prodi */
               <View style={styles.modalEmptyContainer}>
                 <Ionicons name="school-outline" size={48} color="#999" />
                 <ThemedText style={styles.modalEmptyText}>
@@ -292,31 +268,25 @@ export default function AddMahasiswaScreen() {
                 </ThemedText>
               </View>
             ) : (
-              /* FlatList untuk menampilkan daftar prodi yang bisa dipilih */
               <FlatList
-                data={prodiList} // Data prodi yang akan ditampilkan
-                keyExtractor={(item) => item.id?.toString() || item.kode_prodi} // Key unik untuk setiap item
+                data={prodiList}
+                keyExtractor={(item) => (item.id ? item.id.toString() : (item.kode_prodi || Math.random().toString()))}
                 renderItem={({ item }) => (
-                  // Item prodi yang bisa diklik
                   <TouchableOpacity
                     style={[
                       styles.prodiItem,
-                      // Highlight item yang sedang dipilih
                       formData.jurusan === item.nama_prodi && styles.prodiItemSelected,
                     ]}
-                    onPress={() => handleSelectProdi(item)}> {/* Handle pemilihan prodi */}
-                    {/* Konten item: nama, kode, dan fakultas */}
+                    onPress={() => handleSelectProdi(item)}>
                     <View style={styles.prodiItemContent}>
-                      <ThemedText style={styles.prodiItemName}>{item.nama_prodi}</ThemedText>
-                      <ThemedText style={styles.prodiItemCode}>{item.kode_prodi}</ThemedText>
-                      {/* Tampilkan fakultas jika ada */}
+                      <ThemedText style={styles.prodiItemName}>{item.nama_prodi || ''}</ThemedText>
+                      <ThemedText style={styles.prodiItemCode}>{item.kode_prodi || ''}</ThemedText>
                       {item.fakultas && (
                         <ThemedText style={styles.prodiItemFakultas}>
-                          {item.fakultas}
+                          {item.fakultas || ''}
                         </ThemedText>
                       )}
                     </View>
-                    {/* Tampilkan checkmark untuk prodi yang sedang dipilih */}
                     {formData.jurusan === item.nama_prodi && (
                       <Ionicons name="checkmark-circle" size={24} color="#4A90E2" />
                     )}

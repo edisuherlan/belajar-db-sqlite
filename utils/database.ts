@@ -26,6 +26,17 @@ export interface Prodi {
   deskripsi?: string; // Deskripsi program studi (opsional)
 }
 
+/**
+ * Interface untuk data Fakultas
+ * Mendefinisikan struktur data fakultas yang akan disimpan di database
+ */
+export interface Fakultas {
+  id?: number; // ID unik fakultas (auto-increment, opsional saat membuat data baru)
+  kode_fakultas: string; // Kode fakultas (harus unik, contoh: FT, FISIP, FKIP)
+  nama_fakultas: string; // Nama lengkap fakultas
+  deskripsi?: string; // Deskripsi fakultas (opsional)
+}
+
 // Variabel global untuk menyimpan instance database
 let db: SQLite.SQLiteDatabase | null = null;
 // Promise untuk mencegah multiple initialization bersamaan (race condition)
@@ -94,6 +105,18 @@ export const initDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
       )`;
       await database.execAsync(prodiTableSQL);
       console.log('Prodi table created');
+      
+      // Buat tabel fakultas jika belum ada
+      console.log('Creating fakultas table...');
+      const fakultasTableSQL = `CREATE TABLE IF NOT EXISTS fakultas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, -- ID auto-increment
+        kode_fakultas TEXT UNIQUE NOT NULL, -- Kode fakultas harus unik dan tidak boleh kosong
+        nama_fakultas TEXT NOT NULL, -- Nama fakultas tidak boleh kosong
+        deskripsi TEXT, -- Deskripsi opsional (boleh null)
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP -- Timestamp otomatis saat data dibuat
+      )`;
+      await database.execAsync(fakultasTableSQL);
+      console.log('Fakultas table created');
       
       // Simpan instance database ke variabel global
       db = database;
@@ -423,6 +446,154 @@ export const searchProdi = async (keyword: string): Promise<Prodi[]> => {
     return result;
   } catch (error) {
     console.error('Error searching prodi:', error);
+    throw error;
+  }
+};
+
+
+
+// ==================== CRUD FAKULTAS ====================
+
+/**
+ * CREATE - Fungsi untuk menambahkan data fakultas baru
+ * @param fakultas - Data fakultas tanpa ID (ID akan auto-generate)
+ * @returns Promise<number> - ID fakultas yang baru saja dibuat
+ */
+export const addFakultas = async (fakultas: Omit<Fakultas, 'id'>): Promise<number> => {
+  try {
+    console.log('Getting database in addFakultas...');
+    // Dapatkan instance database
+    const database = await getDatabase();
+    
+    // Validasi: pastikan database tidak null
+    if (!database) {
+      throw new Error('Database object is null');
+    }
+    
+    console.log('Database object retrieved, inserting fakultas data...');
+    console.log('Fakultas data:', fakultas);
+    
+    // Eksekusi query INSERT dengan prepared statement
+    // Menggunakan || null untuk mengubah undefined menjadi null untuk field opsional
+    const result = await database.runAsync(
+      `INSERT INTO fakultas (kode_fakultas, nama_fakultas, deskripsi) 
+       VALUES (?, ?, ?)`,
+      [fakultas.kode_fakultas, fakultas.nama_fakultas, fakultas.deskripsi || null]
+    );
+    
+    console.log('Fakultas added successfully with ID:', result.lastInsertRowId);
+    // Kembalikan ID yang baru saja dibuat
+    return result.lastInsertRowId;
+  } catch (error: any) {
+    console.error('Error adding fakultas:', error);
+    // Format error message agar lebih informatif untuk debugging
+    const errorMsg = error?.message || error?.toString() || 'Unknown error';
+    const formattedError = new Error(`Failed to add fakultas: ${errorMsg}`);
+    // Simpan error asli untuk referensi
+    (formattedError as any).originalError = error;
+    throw formattedError;
+  }
+};
+
+/**
+ * READ - Fungsi untuk mengambil semua data fakultas
+ * Data diurutkan berdasarkan nama fakultas secara ascending (A-Z)
+ * @returns Promise<Fakultas[]> - Array berisi semua data fakultas
+ */
+export const getAllFakultas = async (): Promise<Fakultas[]> => {
+  try {
+    const database = await getDatabase();
+    // Query SELECT untuk mengambil semua data fakultas, diurutkan berdasarkan nama
+    const result = await database.getAllAsync<Fakultas>(
+      `SELECT * FROM fakultas ORDER BY nama_fakultas ASC`
+    );
+    return result;
+  } catch (error) {
+    console.error('Error getting all fakultas:', error);
+    throw error;
+  }
+};
+
+/**
+ * READ - Fungsi untuk mengambil data fakultas berdasarkan ID
+ * @param id - ID fakultas yang ingin diambil
+ * @returns Promise<Fakultas | null> - Data fakultas atau null jika tidak ditemukan
+ */
+export const getFakultasById = async (id: number): Promise<Fakultas | null> => {
+  try {
+    const database = await getDatabase();
+    // Query SELECT dengan WHERE clause untuk mencari berdasarkan ID
+    const result = await database.getFirstAsync<Fakultas>(
+      `SELECT * FROM fakultas WHERE id = ?`,
+      [id]
+    );
+    // Kembalikan null jika tidak ditemukan, atau data jika ditemukan
+    return result || null;
+  } catch (error) {
+    console.error('Error getting fakultas by id:', error);
+    throw error;
+  }
+};
+
+/**
+ * UPDATE - Fungsi untuk memperbarui data fakultas yang sudah ada
+ * @param id - ID fakultas yang ingin diperbarui
+ * @param fakultas - Data fakultas baru (tanpa ID)
+ * @returns Promise<void>
+ */
+export const updateFakultas = async (id: number, fakultas: Omit<Fakultas, 'id'>): Promise<void> => {
+  try {
+    const database = await getDatabase();
+    // Query UPDATE untuk memperbarui data berdasarkan ID
+    // Menggunakan || null untuk mengubah undefined menjadi null untuk field opsional
+    await database.runAsync(
+      `UPDATE fakultas 
+       SET kode_fakultas = ?, nama_fakultas = ?, deskripsi = ? 
+       WHERE id = ?`,
+      [fakultas.kode_fakultas, fakultas.nama_fakultas, fakultas.deskripsi || null, id]
+    );
+  } catch (error) {
+    console.error('Error updating fakultas:', error);
+    throw error;
+  }
+};
+
+/**
+ * DELETE - Fungsi untuk menghapus data fakultas
+ * @param id - ID fakultas yang ingin dihapus
+ * @returns Promise<void>
+ */
+export const deleteFakultas = async (id: number): Promise<void> => {
+  try {
+    const database = await getDatabase();
+    // Query DELETE untuk menghapus data berdasarkan ID
+    await database.runAsync(`DELETE FROM fakultas WHERE id = ?`, [id]);
+  } catch (error) {
+    console.error('Error deleting fakultas:', error);
+    throw error;
+  }
+};
+
+/**
+ * SEARCH - Fungsi untuk mencari fakultas berdasarkan keyword
+ * Pencarian dilakukan pada kolom: nama_fakultas, kode_fakultas, dan deskripsi
+ * @param keyword - Kata kunci pencarian
+ * @returns Promise<Fakultas[]> - Array berisi hasil pencarian
+ */
+export const searchFakultas = async (keyword: string): Promise<Fakultas[]> => {
+  try {
+    const database = await getDatabase();
+    // Query SELECT dengan LIKE untuk pencarian partial match
+    // Menggunakan %keyword% untuk mencari di bagian manapun dari field
+    const result = await database.getAllAsync<Fakultas>(
+      `SELECT * FROM fakultas 
+       WHERE nama_fakultas LIKE ? OR kode_fakultas LIKE ? OR deskripsi LIKE ?
+       ORDER BY nama_fakultas ASC`,
+      [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error searching fakultas:', error);
     throw error;
   }
 };

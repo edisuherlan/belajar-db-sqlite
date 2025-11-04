@@ -95,12 +95,13 @@ export default function EditMahasiswaScreen() {
       }
 
       // Isi form dengan data yang sudah ada
+      // Menggunakan || '' untuk mengubah null/undefined menjadi string kosong
       setFormData({
-        nim: mahasiswa.nim,
-        nama: mahasiswa.nama,
-        jurusan: mahasiswa.jurusan,
-        semester: mahasiswa.semester.toString(), // Konversi number ke string untuk TextInput
-        email: mahasiswa.email,
+        nim: mahasiswa.nim || '',
+        nama: mahasiswa.nama || '',
+        jurusan: mahasiswa.jurusan || '',
+        semester: mahasiswa.semester?.toString() || '', // Konversi number ke string untuk TextInput
+        email: mahasiswa.email || '',
       });
     } catch (error) {
       console.error('Error loading mahasiswa:', error);
@@ -234,7 +235,7 @@ export default function EditMahasiswaScreen() {
             <TextInput
               style={styles.input}
               placeholder="Masukkan NIM"
-              value={formData.nim}
+              value={formData.nim || ''}
               onChangeText={(text) => setFormData({ ...formData, nim: text })}
               keyboardType="numeric"
             />
@@ -246,7 +247,7 @@ export default function EditMahasiswaScreen() {
             <TextInput
               style={styles.input}
               placeholder="Masukkan nama lengkap"
-              value={formData.nama}
+              value={formData.nama || ''}
               onChangeText={(text) => setFormData({ ...formData, nama: text })}
             />
           </View>
@@ -278,7 +279,7 @@ export default function EditMahasiswaScreen() {
             <TextInput
               style={styles.input}
               placeholder="Masukkan semester (1-14)"
-              value={formData.semester}
+              value={formData.semester || ''}
               onChangeText={(text) => setFormData({ ...formData, semester: text })}
               keyboardType="numeric"
             />
@@ -290,7 +291,7 @@ export default function EditMahasiswaScreen() {
             <TextInput
               style={styles.input}
               placeholder="Masukkan email"
-              value={formData.email}
+              value={formData.email || ''}
               onChangeText={(text) => setFormData({ ...formData, email: text })}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -360,11 +361,11 @@ export default function EditMahasiswaScreen() {
                     ]}
                     onPress={() => handleSelectProdi(item)}>
                     <View style={styles.prodiItemContent}>
-                      <ThemedText style={styles.prodiItemName}>{item.nama_prodi}</ThemedText>
-                      <ThemedText style={styles.prodiItemCode}>{item.kode_prodi}</ThemedText>
+                      <ThemedText style={styles.prodiItemName}>{item.nama_prodi || ''}</ThemedText>
+                      <ThemedText style={styles.prodiItemCode}>{item.kode_prodi || ''}</ThemedText>
                       {item.fakultas && (
                         <ThemedText style={styles.prodiItemFakultas}>
-                          {item.fakultas}
+                          {item.fakultas || ''}
                         </ThemedText>
                       )}
                     </View>

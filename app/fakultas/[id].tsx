@@ -1,37 +1,36 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getProdiById, updateProdi } from '@/utils/database';
+import { getFakultasById, updateFakultas } from '@/utils/database';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
+
 /**
- * Komponen Halaman Edit Prodi
- * Form untuk mengedit data program studi yang sudah ada di database
+ * Komponen Halaman Edit Fakultas
+ * Form untuk mengedit data fakultas yang sudah ada di database
  * Fitur: memuat data existing, input data, validasi form
- * @param id - ID prodi yang akan diedit (diambil dari route parameter)
+ * @param id - ID fakultas yang akan diedit (diambil dari route parameter)
  */
-export default function EditProdiScreen() {
-  // Ambil ID dari route parameter (dynamic route: /prodi/[id])
+export default function EditFakultasScreen() {
+  // Ambil ID dari route parameter (dynamic route: /fakultas/[id])
   const { id } = useLocalSearchParams<{ id: string }>();
-  // State untuk menyimpan data form prodi
+  // State untuk menyimpan data form fakultas
   const [formData, setFormData] = useState({
-    kode_prodi: '', // Kode program studi (contoh: TI, SI, MI) - wajib, unique
-    nama_prodi: '', // Nama lengkap program studi - wajib
-    fakultas: '', // Nama fakultas - wajib
-    akreditasi: '', // Status akreditasi (opsional, contoh: A, B, C, Unggul)
-    deskripsi: '', // Deskripsi program studi (opsional)
+    kode_fakultas: '', // Kode fakultas (contoh: FT, FISIP, FKIP) - wajib, unique
+    nama_fakultas: '', // Nama lengkap fakultas - wajib
+    deskripsi: '', // Deskripsi fakultas (opsional)
   });
-  // State untuk menandai apakah sedang memuat data prodi dari database
+  // State untuk menandai apakah sedang memuat data fakultas dari database
   const [loading, setLoading] = useState(true);
   // State untuk menandai apakah sedang menyimpan perubahan data
   const [saving, setSaving] = useState(false);
@@ -39,14 +38,14 @@ export default function EditProdiScreen() {
 
   // useEffect untuk memuat data saat komponen pertama kali dimount atau ID berubah
   useEffect(() => {
-    loadProdi();
+    loadFakultas();
   }, [id]);
 
   /**
-   * Fungsi untuk memuat data prodi berdasarkan ID dari database
+   * Fungsi untuk memuat data fakultas berdasarkan ID dari database
    * Data yang dimuat akan diisi ke dalam form untuk diedit
    */
-  const loadProdi = async () => {
+  const loadFakultas = async () => {
     // Validasi: pastikan ID ada
     if (!id) {
       Alert.alert('Error', 'ID tidak valid');
@@ -55,10 +54,10 @@ export default function EditProdiScreen() {
     }
 
     try {
-      // Ambil data prodi dari database berdasarkan ID
-      const prodi = await getProdiById(parseInt(id, 10));
-      if (!prodi) {
-        Alert.alert('Error', 'Prodi tidak ditemukan');
+      // Ambil data fakultas dari database berdasarkan ID
+      const fakultas = await getFakultasById(parseInt(id, 10));
+      if (!fakultas) {
+        Alert.alert('Error', 'Fakultas tidak ditemukan');
         router.back();
         return;
       }
@@ -66,15 +65,13 @@ export default function EditProdiScreen() {
       // Isi form dengan data yang sudah ada
       // Menggunakan || '' untuk mengubah null/undefined menjadi string kosong
       setFormData({
-        kode_prodi: prodi.kode_prodi || '',
-        nama_prodi: prodi.nama_prodi || '',
-        fakultas: prodi.fakultas || '',
-        akreditasi: prodi.akreditasi || '', // Konversi null/undefined ke string kosong
-        deskripsi: prodi.deskripsi || '', // Konversi null/undefined ke string kosong
+        kode_fakultas: fakultas.kode_fakultas || '',
+        nama_fakultas: fakultas.nama_fakultas || '',
+        deskripsi: fakultas.deskripsi || '', // Konversi null/undefined ke string kosong
       });
     } catch (error) {
-      console.error('Error loading prodi:', error);
-      Alert.alert('Error', 'Gagal memuat data prodi');
+      console.error('Error loading fakultas:', error);
+      Alert.alert('Error', 'Gagal memuat data fakultas');
       router.back();
     } finally {
       // Set loading menjadi false setelah selesai (baik berhasil maupun gagal)
@@ -84,20 +81,16 @@ export default function EditProdiScreen() {
 
   /**
    * Fungsi untuk menangani submit form (update data)
-   * Melakukan validasi dan memperbarui data prodi di database
+   * Melakukan validasi dan memperbarui data fakultas di database
    */
   const handleSubmit = async () => {
     // Validasi: Pastikan semua field wajib terisi
-    if (!formData.kode_prodi.trim()) {
-      Alert.alert('Error', 'Kode Prodi tidak boleh kosong');
+    if (!formData.kode_fakultas.trim()) {
+      Alert.alert('Error', 'Kode Fakultas tidak boleh kosong');
       return;
     }
-    if (!formData.nama_prodi.trim()) {
-      Alert.alert('Error', 'Nama Prodi tidak boleh kosong');
-      return;
-    }
-    if (!formData.fakultas.trim()) {
-      Alert.alert('Error', 'Fakultas tidak boleh kosong');
+    if (!formData.nama_fakultas.trim()) {
+      Alert.alert('Error', 'Nama Fakultas tidak boleh kosong');
       return;
     }
 
@@ -110,27 +103,25 @@ export default function EditProdiScreen() {
     // Set saving menjadi true untuk menampilkan loading indicator
     setSaving(true);
     try {
-      // Perbarui data prodi di database berdasarkan ID
+      // Perbarui data fakultas di database berdasarkan ID
       // .trim() digunakan untuk menghapus spasi di awal dan akhir
       // || undefined digunakan untuk mengubah string kosong menjadi undefined (field opsional)
-      await updateProdi(parseInt(id, 10), {
-        kode_prodi: formData.kode_prodi.trim(),
-        nama_prodi: formData.nama_prodi.trim(),
-        fakultas: formData.fakultas.trim(),
-        akreditasi: formData.akreditasi.trim() || undefined, // Opsional
+      await updateFakultas(parseInt(id, 10), {
+        kode_fakultas: formData.kode_fakultas.trim(),
+        nama_fakultas: formData.nama_fakultas.trim(),
         deskripsi: formData.deskripsi.trim() || undefined, // Opsional
       });
       // Tampilkan notifikasi sukses dan kembali ke halaman sebelumnya
-      Alert.alert('Sukses', 'Data prodi berhasil diperbarui', [
+      Alert.alert('Sukses', 'Data fakultas berhasil diperbarui', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (error: any) {
-      console.error('Error updating prodi:', error);
-      // Handle error khusus untuk kode_prodi yang sudah terdaftar (UNIQUE constraint)
+      console.error('Error updating fakultas:', error);
+      // Handle error khusus untuk kode_fakultas yang sudah terdaftar (UNIQUE constraint)
       if (error.message?.includes('UNIQUE constraint')) {
-        Alert.alert('Error', 'Kode Prodi sudah terdaftar');
+        Alert.alert('Error', 'Kode Fakultas sudah terdaftar');
       } else {
-        Alert.alert('Error', 'Gagal memperbarui data prodi');
+        Alert.alert('Error', 'Gagal memperbarui data fakultas');
       }
     } finally {
       // Set saving menjadi false setelah selesai (baik berhasil maupun gagal)
@@ -158,56 +149,34 @@ export default function EditProdiScreen() {
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <ThemedText type="title" style={styles.title}>
-          Edit Prodi
+          Edit Fakultas
         </ThemedText>
-        <View style={styles.placeholder} /> {/* Placeholder untuk balance layout */}
+        <View style={styles.placeholder} />
       </View>
 
       {/* ScrollView untuk form yang bisa di-scroll jika terlalu panjang */}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.form}>
-          {/* Input Kode Prodi */}
+          {/* Input Kode Fakultas */}
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Kode Prodi *</ThemedText>
+            <ThemedText style={styles.label}>Kode Fakultas *</ThemedText>
             <TextInput
               style={styles.input}
-              placeholder="Contoh: TI, SI, MI"
-              value={formData.kode_prodi || ''}
-              onChangeText={(text) => setFormData({ ...formData, kode_prodi: text.toUpperCase() })} // Auto uppercase
+              placeholder="Contoh: FT, FISIP, FKIP"
+              value={formData.kode_fakultas || ''}
+              onChangeText={(text) => setFormData({ ...formData, kode_fakultas: text.toUpperCase() })} // Auto uppercase
               autoCapitalize="characters"
             />
           </View>
 
-          {/* Input Nama Prodi */}
+          {/* Input Nama Fakultas */}
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Nama Prodi *</ThemedText>
-            <TextInput
-              style={styles.input}
-              placeholder="Masukkan nama prodi"
-              value={formData.nama_prodi || ''}
-              onChangeText={(text) => setFormData({ ...formData, nama_prodi: text })}
-            />
-          </View>
-
-          {/* Input Fakultas */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Fakultas *</ThemedText>
+            <ThemedText style={styles.label}>Nama Fakultas *</ThemedText>
             <TextInput
               style={styles.input}
               placeholder="Masukkan nama fakultas"
-              value={formData.fakultas || ''}
-              onChangeText={(text) => setFormData({ ...formData, fakultas: text })}
-            />
-          </View>
-
-          {/* Input Akreditasi (opsional) */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Akreditasi</ThemedText>
-            <TextInput
-              style={styles.input}
-              placeholder="Contoh: A, B, C, Unggul, Baik Sekali"
-              value={formData.akreditasi || ''}
-              onChangeText={(text) => setFormData({ ...formData, akreditasi: text })}
+              value={formData.nama_fakultas || ''}
+              onChangeText={(text) => setFormData({ ...formData, nama_fakultas: text })}
             />
           </View>
 
@@ -216,7 +185,7 @@ export default function EditProdiScreen() {
             <ThemedText style={styles.label}>Deskripsi</ThemedText>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Masukkan deskripsi prodi (opsional)"
+              placeholder="Masukkan deskripsi fakultas (opsional)"
               value={formData.deskripsi || ''}
               onChangeText={(text) => setFormData({ ...formData, deskripsi: text })}
               multiline
@@ -323,3 +292,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+

@@ -21,6 +21,8 @@ export default function RootLayout() {
         <Stack.Screen name="mahasiswa/[id]" options={{ presentation: 'modal', title: 'Edit Mahasiswa' }} />
         <Stack.Screen name="prodi/add" options={{ presentation: 'modal', title: 'Tambah Prodi' }} />
         <Stack.Screen name="prodi/[id]" options={{ presentation: 'modal', title: 'Edit Prodi' }} />
+        <Stack.Screen name="fakultas/add" options={{ presentation: 'modal', title: 'Tambah Fakultas' }} />
+        <Stack.Screen name="fakultas/[id]" options={{ presentation: 'modal', title: 'Edit Fakultas' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

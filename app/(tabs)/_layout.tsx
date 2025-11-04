@@ -10,10 +10,11 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 /**
  * Komponen Layout untuk Tab Navigation
- * Mendefinisikan struktur navigasi tab dengan 3 halaman utama:
- * 1. Mahasiswa - untuk mengelola data mahasiswa
- * 2. Prodi - untuk mengelola data program studi
- * 3. Info - untuk menampilkan informasi aplikasi dan pembuat
+ * Mendefinisikan struktur navigasi tab dengan 4 halaman utama:
+ * 1. Fakultas - untuk mengelola data fakultas (hierarki tertinggi)
+ * 2. Prodi - untuk mengelola data program studi (dibawah fakultas)
+ * 3. Mahasiswa - untuk mengelola data mahasiswa (data utama)
+ * 4. Info - untuk menampilkan informasi aplikasi dan pembuat
  */
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -55,18 +56,18 @@ export default function TabLayout() {
           marginTop: 2, // Margin atas ikon untuk spacing
         },
       }}>
-      {/* Tab 1: Halaman Mahasiswa - Daftar dan manajemen data mahasiswa */}
+      {/* Tab 1: Halaman Fakultas - Daftar dan manajemen data fakultas (hierarki tertinggi) */}
       <Tabs.Screen
-        name="index"
+        name="fakultas"
         options={{
-          title: 'Mahasiswa', // Label tab
+          title: 'Fakultas', // Label tab
           tabBarIcon: ({ color }) => (
-            <Ionicons name="people" size={24} color={color} /> // Ikon untuk tab mahasiswa
+            <Ionicons name="school" size={24} color={color} /> // Ikon untuk tab fakultas
           ),
         }}
       />
       
-      {/* Tab 2: Halaman Prodi - Daftar dan manajemen data program studi */}
+      {/* Tab 2: Halaman Prodi - Daftar dan manajemen data program studi (dibawah fakultas) */}
       <Tabs.Screen
         name="prodi"
         options={{
@@ -77,7 +78,18 @@ export default function TabLayout() {
         }}
       />
       
-      {/* Tab 3: Halaman Info - Informasi aplikasi dan identitas pembuat */}
+      {/* Tab 3: Halaman Mahasiswa - Daftar dan manajemen data mahasiswa (data utama) */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Mahasiswa', // Label tab
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="people" size={24} color={color} /> // Ikon untuk tab mahasiswa
+          ),
+        }}
+      />
+      
+      {/* Tab 4: Halaman Info - Informasi aplikasi dan identitas pembuat */}
       <Tabs.Screen
         name="explore"
         options={{

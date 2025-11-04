@@ -13,6 +13,7 @@ export function ThemedText({
   lightColor,
   darkColor,
   type = 'default',
+  children,
   ...rest
 }: ThemedTextProps) {
   const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
@@ -28,8 +29,9 @@ export function ThemedText({
         type === 'link' ? styles.link : undefined,
         style,
       ]}
-      {...rest}
-    />
+      {...rest}>
+      {children}
+    </Text>
   );
 }
 

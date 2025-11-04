@@ -1,6 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { addProdi } from '@/utils/database';
+import { addFakultas } from '@/utils/database';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -15,18 +15,16 @@ import {
 } from 'react-native';
 
 /**
- * Komponen Halaman Tambah Prodi
- * Form untuk menambahkan data program studi baru ke database
- * Fitur: input data, validasi form (kode_prodi, nama_prodi, fakultas wajib; akreditasi dan deskripsi opsional)
+ * Komponen Halaman Tambah Fakultas
+ * Form untuk menambahkan data fakultas baru ke database
+ * Fitur: input data, validasi form (kode_fakultas, nama_fakultas wajib; deskripsi opsional)
  */
-export default function AddProdiScreen() {
-  // State untuk menyimpan data form prodi
+export default function AddFakultasScreen() {
+  // State untuk menyimpan data form fakultas
   const [formData, setFormData] = useState({
-    kode_prodi: '', // Kode program studi (contoh: TI, SI, MI) - wajib, unique
-    nama_prodi: '', // Nama lengkap program studi - wajib
-    fakultas: '', // Nama fakultas - wajib
-    akreditasi: '', // Status akreditasi (opsional, contoh: A, B, C, Unggul)
-    deskripsi: '', // Deskripsi program studi (opsional)
+    kode_fakultas: '', // Kode fakultas (contoh: FT, FISIP, FKIP) - wajib, unique
+    nama_fakultas: '', // Nama lengkap fakultas - wajib
+    deskripsi: '', // Deskripsi fakultas (opsional)
   });
   // State untuk menandai apakah sedang menyimpan data
   const [loading, setLoading] = useState(false);
@@ -34,52 +32,46 @@ export default function AddProdiScreen() {
 
   /**
    * Fungsi untuk menangani submit form
-   * Melakukan validasi dan menyimpan data prodi ke database
+   * Melakukan validasi dan menyimpan data fakultas ke database
    */
   const handleSubmit = async () => {
     // Validasi: Pastikan semua field wajib terisi
-    if (!formData.kode_prodi.trim()) {
-      Alert.alert('Error', 'Kode Prodi tidak boleh kosong');
+    if (!formData.kode_fakultas.trim()) {
+      Alert.alert('Error', 'Kode Fakultas tidak boleh kosong');
       return;
     }
-    if (!formData.nama_prodi.trim()) {
-      Alert.alert('Error', 'Nama Prodi tidak boleh kosong');
-      return;
-    }
-    if (!formData.fakultas.trim()) {
-      Alert.alert('Error', 'Fakultas tidak boleh kosong');
+    if (!formData.nama_fakultas.trim()) {
+      Alert.alert('Error', 'Nama Fakultas tidak boleh kosong');
       return;
     }
 
     // Set loading menjadi true untuk menampilkan loading indicator
     setLoading(true);
     try {
-      console.log('=== Start adding prodi ===');
+      console.log('=== Start adding fakultas ===');
       console.log('Form data:', formData);
       
       // Siapkan data untuk disimpan ke database
       // .trim() digunakan untuk menghapus spasi di awal dan akhir
       // || undefined digunakan untuk mengubah string kosong menjadi undefined (field opsional)
-      const prodiData = {
-        kode_prodi: formData.kode_prodi.trim(),
-        nama_prodi: formData.nama_prodi.trim(),
-        fakultas: formData.fakultas.trim(),
-        akreditasi: formData.akreditasi.trim() || undefined, // Opsional
+      const fakultasData = {
+        kode_fakultas: formData.kode_fakultas.trim(),
+        nama_fakultas: formData.nama_fakultas.trim(),
         deskripsi: formData.deskripsi.trim() || undefined, // Opsional
       };
-      console.log('Prodi data to insert:', prodiData);
+      console.log('Fakultas data to insert:', fakultasData);
       
-      // addProdi akan memanggil getDatabase() yang akan memastikan database ter-initialize
-      const result = await addProdi(prodiData);
-      console.log('Prodi added successfully with ID:', result);
+      // addFakultas akan memanggil getDatabase() yang akan memastikan database ter-initialize
+      const result = await addFakultas(fakultasData);
+      console.log('Fakultas added successfully with ID:', result);
       
       // Tampilkan notifikasi sukses dan kembali ke halaman sebelumnya
-      Alert.alert('Sukses', 'Prodi berhasil ditambahkan', [
+      Alert.alert('Sukses', 'Fakultas berhasil ditambahkan', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (error: any) {
       // Log error secara detail untuk debugging
-      console.error('=== Error adding prodi ===');
+      console.error('=== Error adding fakultas ===');
       console.error('Error object:', error);
       console.error('Error type:', typeof error);
       console.error('Error message:', error?.message);
@@ -92,16 +84,16 @@ export default function AddProdiScreen() {
       
       // Handle error berdasarkan jenis error
       if (errorMessage.includes('UNIQUE constraint') || errorMessage.includes('UNIQUE') || errorMessage.includes('UNIQUE')) {
-        Alert.alert('Error', 'Kode Prodi sudah terdaftar. Silakan gunakan kode prodi lain.');
+        Alert.alert('Error', 'Kode Fakultas sudah terdaftar. Silakan gunakan kode fakultas lain.');
       } else if (errorMessage.includes('no such table') || errorMessage.includes('no such table')) {
         Alert.alert('Error', 'Database belum terinisialisasi. Silakan restart aplikasi.');
       } else {
-        Alert.alert('Error', `Gagal menambahkan prodi:\n${errorMessage}`);
+        Alert.alert('Error', `Gagal menambahkan fakultas:\n${errorMessage}`);
       }
     } finally {
       // Set loading menjadi false setelah selesai (baik berhasil maupun gagal)
       setLoading(false);
-      console.log('=== End adding prodi ===');
+      console.log('=== End adding fakultas ===');
     }
   };
 
@@ -113,7 +105,7 @@ export default function AddProdiScreen() {
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <ThemedText type="title" style={styles.title}>
-          Tambah Prodi
+          Tambah Fakultas
         </ThemedText>
         <View style={styles.placeholder} />
       </View>
@@ -121,48 +113,26 @@ export default function AddProdiScreen() {
       {/* ScrollView untuk form yang bisa di-scroll jika terlalu panjang */}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.form}>
-          {/* Input Kode Prodi */}
+          {/* Input Kode Fakultas */}
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Kode Prodi *</ThemedText>
+            <ThemedText style={styles.label}>Kode Fakultas *</ThemedText>
             <TextInput
               style={styles.input}
-              placeholder="Contoh: TI, SI, MI"
-              value={formData.kode_prodi || ''}
-              onChangeText={(text) => setFormData({ ...formData, kode_prodi: text.toUpperCase() })} // Auto uppercase
+              placeholder="Contoh: FT, FISIP, FKIP"
+              value={formData.kode_fakultas || ''}
+              onChangeText={(text) => setFormData({ ...formData, kode_fakultas: text.toUpperCase() })} // Auto uppercase
               autoCapitalize="characters"
             />
           </View>
 
-          {/* Input Nama Prodi */}
+          {/* Input Nama Fakultas */}
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Nama Prodi *</ThemedText>
-            <TextInput
-              style={styles.input}
-              placeholder="Masukkan nama prodi"
-              value={formData.nama_prodi || ''}
-              onChangeText={(text) => setFormData({ ...formData, nama_prodi: text })}
-            />
-          </View>
-
-          {/* Input Fakultas */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Fakultas *</ThemedText>
+            <ThemedText style={styles.label}>Nama Fakultas *</ThemedText>
             <TextInput
               style={styles.input}
               placeholder="Masukkan nama fakultas"
-              value={formData.fakultas || ''}
-              onChangeText={(text) => setFormData({ ...formData, fakultas: text })}
-            />
-          </View>
-
-          {/* Input Akreditasi (opsional) */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Akreditasi</ThemedText>
-            <TextInput
-              style={styles.input}
-              placeholder="Contoh: A, B, C, Unggul, Baik Sekali"
-              value={formData.akreditasi || ''}
-              onChangeText={(text) => setFormData({ ...formData, akreditasi: text })}
+              value={formData.nama_fakultas || ''}
+              onChangeText={(text) => setFormData({ ...formData, nama_fakultas: text })}
             />
           </View>
 
@@ -171,7 +141,7 @@ export default function AddProdiScreen() {
             <ThemedText style={styles.label}>Deskripsi</ThemedText>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Masukkan deskripsi prodi (opsional)"
+              placeholder="Masukkan deskripsi fakultas (opsional)"
               value={formData.deskripsi || ''}
               onChangeText={(text) => setFormData({ ...formData, deskripsi: text })}
               multiline
@@ -269,3 +239,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
