@@ -1,112 +1,276 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, View } from 'react-native';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
 
-export default function TabTwoScreen() {
+/**
+ * Komponen Halaman Info Aplikasi
+ * Menampilkan informasi tentang aplikasi dan identitas pembuat
+ * Menggunakan ParallaxScrollView untuk efek parallax yang menarik
+ */
+export default function InfoScreen() {
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
+      headerBackgroundColor={{ light: '#4A90E2', dark: '#2C5282' }} // Warna background header untuk light dan dark mode
       headerImage={
-        <IconSymbol
+        // Ikon informasi besar sebagai header image dengan efek parallax
+        <Ionicons
+          name="information-circle"
           size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
+          color="#FFFFFF"
           style={styles.headerImage}
         />
       }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
+      <ThemedView style={styles.container}>
+        {/* Section 1: Informasi Nama Aplikasi */}
+        <View style={styles.section}>
+          <ThemedView style={styles.card}>
+            {/* Container untuk ikon aplikasi */}
+            <View style={styles.iconContainer}>
+              <Ionicons name="apps" size={48} color="#4A90E2" />
+            </View>
+            
+            {/* Judul aplikasi */}
+            <ThemedText type="title" style={styles.appTitle}>
+              Belajar Database
             </ThemedText>
-          ),
-        })}
-      </Collapsible>
+            
+            {/* Subtitle/deskripsi singkat aplikasi */}
+            <ThemedText style={styles.appSubtitle}>
+              Aplikasi Manajemen Data Mahasiswa dan Program Studi
+            </ThemedText>
+            
+            {/* Deskripsi lengkap tentang aplikasi */}
+            <ThemedText style={styles.appDescription}>
+              Aplikasi mobile untuk mengelola data mahasiswa dan program studi menggunakan 
+              database lokal SQLite. Fitur lengkap CRUD (Create, Read, Update, Delete) 
+              dengan antarmuka yang mudah digunakan.
+            </ThemedText>
+          </ThemedView>
+        </View>
+
+        {/* Section 2: Informasi Pembuat Aplikasi */}
+        <View style={styles.section}>
+          <ThemedView style={styles.card}>
+            {/* Header section dengan ikon dan judul */}
+            <View style={styles.sectionHeader}>
+              <Ionicons name="person-circle" size={32} color="#4A90E2" />
+              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                Tentang Pembuat
+              </ThemedText>
+            </View>
+            
+            {/* Baris informasi: Nama Pembuat */}
+            <View style={styles.infoRow}>
+              <Ionicons name="person-outline" size={24} color="#666" />
+              <View style={styles.infoContent}>
+                <ThemedText style={styles.infoLabel}>Nama</ThemedText>
+                <ThemedText style={styles.infoValue}>Edi Suherlan</ThemedText>
+              </View>
+            </View>
+
+            {/* Baris informasi: Email Pembuat */}
+            <View style={styles.infoRow}>
+              <Ionicons name="mail-outline" size={24} color="#666" />
+              <View style={styles.infoContent}>
+                <ThemedText style={styles.infoLabel}>Email</ThemedText>
+                <ThemedText style={styles.infoValue}>edisuherlan@gmail.com</ThemedText>
+              </View>
+            </View>
+
+            {/* Baris informasi: Institusi/Universitas */}
+            <View style={styles.infoRow}>
+              <Ionicons name="school-outline" size={24} color="#666" />
+              <View style={styles.infoContent}>
+                <ThemedText style={styles.infoLabel}>Institusi</ThemedText>
+                <ThemedText style={styles.infoValue}>Universitas Faletehan</ThemedText>
+              </View>
+            </View>
+
+            {/* Baris informasi: Teknologi yang digunakan */}
+            <View style={styles.infoRow}>
+              <Ionicons name="code-slash-outline" size={24} color="#666" />
+              <View style={styles.infoContent}>
+                <ThemedText style={styles.infoLabel}>Teknologi</ThemedText>
+                <ThemedText style={styles.infoValue}>
+                  React Native • Expo • SQLite • TypeScript
+                </ThemedText>
+              </View>
+            </View>
+          </ThemedView>
+        </View>
+
+        {/* Section 3: Informasi Versi dan Detail Aplikasi */}
+        <View style={styles.section}>
+          <ThemedView style={styles.card}>
+            {/* Header section dengan ikon dan judul */}
+            <View style={styles.sectionHeader}>
+              <Ionicons name="information-circle-outline" size={32} color="#4A90E2" />
+              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                Informasi Aplikasi
+              </ThemedText>
+            </View>
+            
+            {/* Baris informasi: Versi aplikasi */}
+            <View style={styles.infoRow}>
+              <Ionicons name="cube-outline" size={24} color="#666" />
+              <View style={styles.infoContent}>
+                <ThemedText style={styles.infoLabel}>Versi</ThemedText>
+                <ThemedText style={styles.infoValue}>1.0.0</ThemedText>
+              </View>
+            </View>
+
+            {/* Baris informasi: Tahun pembuatan */}
+            <View style={styles.infoRow}>
+              <Ionicons name="calendar-outline" size={24} color="#666" />
+              <View style={styles.infoContent}>
+                <ThemedText style={styles.infoLabel}>Tahun</ThemedText>
+                <ThemedText style={styles.infoValue}>2024</ThemedText>
+              </View>
+            </View>
+
+            {/* Baris informasi: Lisensi aplikasi */}
+            <View style={styles.infoRow}>
+              <Ionicons name="document-text-outline" size={24} color="#666" />
+              <View style={styles.infoContent}>
+                <ThemedText style={styles.infoLabel}>Lisensi</ThemedText>
+                <ThemedText style={styles.infoValue}>Educational Purpose</ThemedText>
+              </View>
+            </View>
+          </ThemedView>
+        </View>
+
+        {/* Footer: Copyright dan pesan */}
+        <View style={styles.footer}>
+          <ThemedText style={styles.footerText}>
+            Dibuat dengan ❤️ untuk pembelajaran
+          </ThemedText>
+          <ThemedText style={styles.footerSubtext}>
+            © 2024 Belajar Database App
+          </ThemedText>
+        </View>
+      </ThemedView>
     </ParallaxScrollView>
   );
 }
 
+// Stylesheet untuk styling komponen
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  // Container utama untuk konten halaman
+  container: {
+    flex: 1,
+    paddingBottom: 20, // Padding bawah untuk spacing dengan tab bar
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  // Style untuk header image (ikon informasi di background header)
+  headerImage: {
+    bottom: -90, // Posisi vertikal untuk efek parallax
+    left: -35, // Posisi horizontal
+    position: 'absolute', // Absolute positioning
+    opacity: 0.3, // Opacity rendah untuk efek background
+  },
+  // Style untuk setiap section/kartu informasi
+  section: {
+    marginBottom: 20, // Jarak antar section
+    paddingHorizontal: 16, // Padding horizontal
+  },
+  // Style untuk kartu informasi (card component)
+  card: {
+    backgroundColor: '#FFF', // Background putih untuk card
+    borderRadius: 16, // Border radius untuk sudut membulat
+    padding: 20, // Padding dalam card
+    shadowColor: '#000', // Warna shadow
+    shadowOffset: { width: 0, height: 2 }, // Offset shadow
+    shadowOpacity: 0.1, // Opacity shadow
+    shadowRadius: 8, // Radius shadow
+    elevation: 4, // Elevation untuk Android shadow
+    borderWidth: 1, // Border width
+    borderColor: '#E0E0E0', // Warna border
+  },
+  // Container untuk ikon aplikasi di section pertama
+  iconContainer: {
+    alignItems: 'center', // Rata tengah horizontal
+    marginBottom: 16, // Margin bawah
+  },
+  // Style untuk judul aplikasi
+  appTitle: {
+    fontSize: 28, // Ukuran font besar
+    fontWeight: 'bold', // Tebal
+    textAlign: 'center', // Rata tengah
+    marginBottom: 8, // Margin bawah
+    color: '#333', // Warna teks gelap
+  },
+  // Style untuk subtitle aplikasi
+  appSubtitle: {
+    fontSize: 16, // Ukuran font medium
+    textAlign: 'center', // Rata tengah
+    color: '#666', // Warna abu-abu
+    marginBottom: 16, // Margin bawah
+    fontWeight: '500', // Ketebalan medium
+  },
+  // Style untuk deskripsi aplikasi
+  appDescription: {
+    fontSize: 14, // Ukuran font kecil
+    textAlign: 'center', // Rata tengah
+    color: '#666', // Warna abu-abu
+    lineHeight: 22, // Line height untuk readability
+  },
+  // Style untuk header setiap section (ikon + judul)
+  sectionHeader: {
+    flexDirection: 'row', // Layout horizontal
+    alignItems: 'center', // Rata tengah vertikal
+    marginBottom: 20, // Margin bawah
+    gap: 12, // Jarak antar elemen
+  },
+  // Style untuk judul section
+  sectionTitle: {
+    fontSize: 20, // Ukuran font
+    color: '#333', // Warna teks gelap
+  },
+  // Style untuk setiap baris informasi (ikon + label + value)
+  infoRow: {
+    flexDirection: 'row', // Layout horizontal
+    alignItems: 'flex-start', // Align items di awal
+    marginBottom: 20, // Margin bawah antar baris
+    gap: 16, // Jarak antara ikon dan konten
+  },
+  // Container untuk konten informasi (label + value)
+  infoContent: {
+    flex: 1, // Mengambil sisa ruang yang tersedia
+  },
+  // Style untuk label informasi (Nama, Email, dll)
+  infoLabel: {
+    fontSize: 12, // Ukuran font kecil
+    color: '#999', // Warna abu-abu muda
+    marginBottom: 4, // Margin bawah
+    textTransform: 'uppercase', // Huruf kapital
+    letterSpacing: 0.5, // Spasi antar huruf
+  },
+  // Style untuk value informasi (nilai dari label)
+  infoValue: {
+    fontSize: 16, // Ukuran font medium
+    color: '#333', // Warna teks gelap
+    fontWeight: '500', // Ketebalan medium
+  },
+  // Container untuk footer di bagian bawah
+  footer: {
+    alignItems: 'center', // Rata tengah horizontal
+    marginTop: 20, // Margin atas
+    marginBottom: 40, // Margin bawah yang besar untuk spacing dengan tab bar
+    paddingHorizontal: 16, // Padding horizontal
+  },
+  // Style untuk teks footer utama
+  footerText: {
+    fontSize: 14, // Ukuran font kecil
+    color: '#666', // Warna abu-abu
+    marginBottom: 8, // Margin bawah
+    textAlign: 'center', // Rata tengah
+  },
+  // Style untuk teks copyright di footer
+  footerSubtext: {
+    fontSize: 12, // Ukuran font sangat kecil
+    color: '#999', // Warna abu-abu muda
+    textAlign: 'center', // Rata tengah
   },
 });

@@ -1,35 +1,34 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { deleteMahasiswa, getAllMahasiswa, initDatabase, searchMahasiswa, type Mahasiswa } from '@/utils/database';
+import { deleteProdi, getAllProdi, initDatabase, searchProdi, type Prodi } from '@/utils/database';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    RefreshControl,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 /**
- * Komponen Halaman Daftar Mahasiswa
- * Menampilkan daftar semua mahasiswa yang tersimpan di database
+ * Komponen Halaman Daftar Prodi
+ * Menampilkan daftar semua program studi yang tersimpan di database
  * Fitur: tampil data, pencarian, tambah, edit, hapus, dan pull-to-refresh
  */
-export default function MahasiswaScreen() {
-  // State untuk menyimpan daftar mahasiswa
-  const [mahasiswaList, setMahasiswaList] = useState<Mahasiswa[]>([]);
+export default function ProdiScreen() {
+  // State untuk menyimpan daftar prodi
+  const [prodiList, setProdiList] = useState<Prodi[]>([]);
   // State untuk menyimpan keyword pencarian
   const [searchQuery, setSearchQuery] = useState('');
   // State untuk menandai apakah data sedang dimuat (saat pertama kali buka halaman)
   const [loading, setLoading] = useState(true);
   // State untuk menandai apakah sedang melakukan refresh (pull-to-refresh)
   const [refreshing, setRefreshing] = useState(false);
-  // Router untuk navigasi ke halaman lain
   const router = useRouter();
 
   // useEffect untuk menjalankan fungsi initialization saat komponen pertama kali dimount
@@ -42,22 +41,22 @@ export default function MahasiswaScreen() {
     // Jika searchQuery kosong, tampilkan semua data
     // Jika tidak kosong, lakukan pencarian
     if (searchQuery.trim() === '') {
-      loadMahasiswa();
+      loadProdi();
     } else {
       handleSearch(searchQuery);
     }
   }, [searchQuery]);
 
   /**
-   * Fungsi untuk menginisialisasi database dan memuat data mahasiswa
+   * Fungsi untuk menginisialisasi database dan memuat data prodi
    * Dipanggil saat halaman pertama kali dibuka
    */
   const initializeAndLoadData = async () => {
     try {
       // Pastikan database sudah ter-initialize
       await initDatabase();
-      // Muat data mahasiswa dari database
-      await loadMahasiswa();
+      // Muat data prodi dari database
+      await loadProdi();
     } catch (error) {
       console.error('Error initializing:', error);
       Alert.alert('Error', 'Gagal memuat database');
@@ -68,51 +67,51 @@ export default function MahasiswaScreen() {
   };
 
   /**
-   * Fungsi untuk memuat semua data mahasiswa dari database
+   * Fungsi untuk memuat semua data prodi dari database
    */
-  const loadMahasiswa = async () => {
+  const loadProdi = async () => {
     try {
-      // Ambil semua data mahasiswa dari database
-      const data = await getAllMahasiswa();
+      // Ambil semua data prodi dari database
+      const data = await getAllProdi();
       // Update state dengan data yang diperoleh
-      setMahasiswaList(data);
+      setProdiList(data);
     } catch (error) {
-      console.error('Error loading mahasiswa:', error);
-      Alert.alert('Error', 'Gagal memuat data mahasiswa');
+      console.error('Error loading prodi:', error);
+      Alert.alert('Error', 'Gagal memuat data prodi');
     }
   };
 
   /**
-   * Fungsi untuk melakukan pencarian mahasiswa berdasarkan keyword
+   * Fungsi untuk melakukan pencarian prodi berdasarkan keyword
    * @param keyword - Kata kunci untuk pencarian
    */
   const handleSearch = async (keyword: string) => {
     // Jika keyword kosong, tampilkan semua data
     if (keyword.trim() === '') {
-      loadMahasiswa();
+      loadProdi();
       return;
     }
     try {
       // Lakukan pencarian di database berdasarkan keyword
-      const results = await searchMahasiswa(keyword);
+      const results = await searchProdi(keyword);
       // Update state dengan hasil pencarian
-      setMahasiswaList(results);
+      setProdiList(results);
     } catch (error) {
       console.error('Error searching:', error);
     }
   };
 
   /**
-   * Fungsi untuk menghapus data mahasiswa
+   * Fungsi untuk menghapus data prodi
    * Menampilkan konfirmasi sebelum menghapus
-   * @param id - ID mahasiswa yang ingin dihapus
-   * @param nama - Nama mahasiswa (untuk ditampilkan di konfirmasi)
+   * @param id - ID prodi yang ingin dihapus
+   * @param namaProdi - Nama prodi (untuk ditampilkan di konfirmasi)
    */
-  const handleDelete = (id: number, nama: string) => {
+  const handleDelete = (id: number, namaProdi: string) => {
     // Tampilkan dialog konfirmasi sebelum menghapus
     Alert.alert(
-      'Hapus Mahasiswa',
-      `Apakah Anda yakin ingin menghapus ${nama}?`,
+      'Hapus Prodi',
+      `Apakah Anda yakin ingin menghapus ${namaProdi}?`,
       [
         { text: 'Batal', style: 'cancel' }, // Tombol batal
         {
@@ -121,14 +120,14 @@ export default function MahasiswaScreen() {
           onPress: async () => {
             try {
               // Hapus data dari database
-              await deleteMahasiswa(id);
+              await deleteProdi(id);
               // Muat ulang data setelah berhasil menghapus
-              await loadMahasiswa();
+              await loadProdi();
               // Tampilkan notifikasi sukses
-              Alert.alert('Sukses', 'Mahasiswa berhasil dihapus');
+              Alert.alert('Sukses', 'Prodi berhasil dihapus');
             } catch (error) {
               console.error('Error deleting:', error);
-              Alert.alert('Error', 'Gagal menghapus mahasiswa');
+              Alert.alert('Error', 'Gagal menghapus prodi');
             }
           },
         },
@@ -142,29 +141,32 @@ export default function MahasiswaScreen() {
    */
   const onRefresh = async () => {
     setRefreshing(true); // Set refreshing menjadi true untuk menampilkan indicator
-    await loadMahasiswa(); // Muat ulang data dari database
+    await loadProdi(); // Muat ulang data dari database
     setRefreshing(false); // Set refreshing menjadi false setelah selesai
   };
 
   /**
-   * Komponen untuk render setiap item mahasiswa di dalam FlatList
-   * @param item - Data mahasiswa yang akan dirender
+   * Komponen untuk render setiap item prodi di dalam FlatList
+   * @param item - Data prodi yang akan dirender
    */
-  const renderMahasiswaItem = ({ item }: { item: Mahasiswa }) => (
+  const renderProdiItem = ({ item }: { item: Prodi }) => (
     <View style={styles.card}>
       <View style={styles.cardContent}>
-        {/* Header card: nama mahasiswa dan tombol aksi */}
+        {/* Header card: nama prodi, kode prodi, dan tombol aksi */}
         <View style={styles.cardHeader}>
-          <ThemedText type="defaultSemiBold" style={styles.nama}>
-            {item.nama}
-          </ThemedText>
+          <View style={styles.titleSection}>
+            <ThemedText type="defaultSemiBold" style={styles.namaProdi}>
+              {item.nama_prodi}
+            </ThemedText>
+            <ThemedText style={styles.kodeProdi}>{item.kode_prodi}</ThemedText>
+          </View>
           {/* Tombol edit dan hapus */}
           <View style={styles.actionButtons}>
             {/* Tombol edit: navigasi ke halaman edit */}
             <TouchableOpacity
               onPress={() => {
                 if (item.id) {
-                  router.push(`/mahasiswa/${item.id}` as any);
+                  router.push(`/prodi/${item.id}` as any);
                 }
               }}
               style={[styles.iconButton, styles.editButton]}>
@@ -174,7 +176,7 @@ export default function MahasiswaScreen() {
             <TouchableOpacity
               onPress={() => {
                 if (item.id) {
-                  handleDelete(item.id, item.nama);
+                  handleDelete(item.id, item.nama_prodi);
                 }
               }}
               style={[styles.iconButton, styles.deleteButton]}>
@@ -182,28 +184,29 @@ export default function MahasiswaScreen() {
             </TouchableOpacity>
           </View>
         </View>
-        {/* Detail card: informasi lengkap mahasiswa */}
+        {/* Detail card: informasi lengkap prodi */}
         <View style={styles.cardDetail}>
-          {/* Baris detail: NIM */}
-          <View style={styles.detailRow}>
-            <Ionicons name="id-card-outline" size={16} color="#666" />
-            <ThemedText style={styles.detailText}>NIM: {item.nim}</ThemedText>
-          </View>
-          {/* Baris detail: Jurusan */}
+          {/* Baris detail: Fakultas */}
           <View style={styles.detailRow}>
             <Ionicons name="school-outline" size={16} color="#666" />
-            <ThemedText style={styles.detailText}>{item.jurusan}</ThemedText>
+            <ThemedText style={styles.detailText}>{item.fakultas}</ThemedText>
           </View>
-          {/* Baris detail: Semester */}
-          <View style={styles.detailRow}>
-            <Ionicons name="calendar-outline" size={16} color="#666" />
-            <ThemedText style={styles.detailText}>Semester {item.semester}</ThemedText>
-          </View>
-          {/* Baris detail: Email */}
-          <View style={styles.detailRow}>
-            <Ionicons name="mail-outline" size={16} color="#666" />
-            <ThemedText style={styles.detailText}>{item.email}</ThemedText>
-          </View>
+          {/* Baris detail: Akreditasi (opsional, hanya tampil jika ada) */}
+          {item.akreditasi && (
+            <View style={styles.detailRow}>
+              <Ionicons name="star-outline" size={16} color="#666" />
+              <ThemedText style={styles.detailText}>Akreditasi: {item.akreditasi}</ThemedText>
+            </View>
+          )}
+          {/* Baris detail: Deskripsi (opsional, hanya tampil jika ada) */}
+          {item.deskripsi && (
+            <View style={styles.detailRow}>
+              <Ionicons name="document-text-outline" size={16} color="#666" />
+              <ThemedText style={styles.detailText} numberOfLines={2}>
+                {item.deskripsi}
+              </ThemedText>
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -226,11 +229,11 @@ export default function MahasiswaScreen() {
       {/* Header halaman: judul dan tombol tambah */}
       <View style={styles.header}>
         <ThemedText type="title" style={styles.title}>
-          Data Mahasiswa
+          Data Prodi
         </ThemedText>
-        {/* Tombol untuk navigasi ke halaman tambah mahasiswa */}
+        {/* Tombol untuk navigasi ke halaman tambah prodi */}
         <TouchableOpacity
-          onPress={() => router.push('/mahasiswa/add' as any)}
+          onPress={() => router.push('/prodi/add' as any)}
           style={styles.addButton}>
           <Ionicons name="add-circle" size={24} color="#FFF" />
           <ThemedText style={styles.addButtonText}>Tambah</ThemedText>
@@ -243,7 +246,7 @@ export default function MahasiswaScreen() {
         {/* Input untuk pencarian */}
         <TextInput
           style={styles.searchInput}
-          placeholder="Cari mahasiswa..."
+          placeholder="Cari prodi..."
           placeholderTextColor="#999"
           value={searchQuery}
           onChangeText={setSearchQuery} // Update searchQuery setiap kali user mengetik
@@ -257,26 +260,26 @@ export default function MahasiswaScreen() {
       </View>
 
       {/* Tampilkan empty state jika tidak ada data */}
-      {mahasiswaList.length === 0 ? (
+      {prodiList.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="people-outline" size={64} color="#CCC" />
+          <Ionicons name="school-outline" size={64} color="#CCC" />
           <ThemedText style={styles.emptyText}>
-            {searchQuery ? 'Tidak ada hasil pencarian' : 'Belum ada data mahasiswa'}
+            {searchQuery ? 'Tidak ada hasil pencarian' : 'Belum ada data prodi'}
           </ThemedText>
-          {/* Tombol tambah mahasiswa pertama (hanya tampil jika tidak ada pencarian) */}
+          {/* Tombol tambah prodi pertama (hanya tampil jika tidak ada pencarian) */}
           {!searchQuery && (
             <TouchableOpacity
-              onPress={() => router.push('/mahasiswa/add' as any)}
+              onPress={() => router.push('/prodi/add' as any)}
               style={styles.emptyAddButton}>
-              <ThemedText style={styles.emptyAddButtonText}>Tambah Mahasiswa Pertama</ThemedText>
+              <ThemedText style={styles.emptyAddButtonText}>Tambah Prodi Pertama</ThemedText>
             </TouchableOpacity>
           )}
         </View>
       ) : (
-        /* FlatList untuk menampilkan daftar mahasiswa */
+        /* FlatList untuk menampilkan daftar prodi */
         <FlatList
-          data={mahasiswaList} // Data yang akan ditampilkan
-          renderItem={renderMahasiswaItem} // Fungsi untuk render setiap item
+          data={prodiList} // Data yang akan ditampilkan
+          renderItem={renderProdiItem} // Fungsi untuk render setiap item
           keyExtractor={(item) => item.id?.toString() || Math.random().toString()} // Key unik untuk setiap item
           contentContainerStyle={styles.listContent} // Style untuk container list
           refreshControl={
@@ -372,13 +375,22 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
-  nama: {
+  titleSection: {
     flex: 1,
+    marginRight: 12,
+  },
+  namaProdi: {
     fontSize: 18,
     fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  kodeProdi: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -405,6 +417,7 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 14,
     color: '#666',
+    flex: 1,
   },
   emptyContainer: {
     flex: 1,
