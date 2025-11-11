@@ -13,8 +13,9 @@ Aplikasi mobile untuk mengelola data mahasiswa dan program studi menggunakan dat
 5. [Menjalankan Aplikasi](#5-menjalankan-aplikasi)
 6. [Cara Menggunakan Aplikasi](#6-cara-menggunakan-aplikasi)
 7. [Fitur-Fitur Aplikasi](#7-fitur-fitur-aplikasi)
-8. [Troubleshooting](#8-troubleshooting)
-9. [Informasi Developer](#9-informasi-developer)
+8. [Fitur Login & Manajemen Sesi (Baru)](#8-fitur-login--manajemen-sesi-baru)
+9. [Troubleshooting](#9-troubleshooting)
+10. [Informasi Developer](#10-informasi-developer)
 
 ---
 
@@ -93,12 +94,16 @@ Berikut adalah struktur folder dan file penting dalam project ini:
 belajar_db/
 │
 ├── app/                          # Folder utama untuk halaman aplikasi
-│   ├── _layout.tsx              # Root layout (navigasi utama)
-│   ├── (tabs)/                  # Folder untuk tab navigation
-│   │   ├── _layout.tsx          # Layout untuk tab navigation
-│   │   ├── index.tsx            # Halaman utama (List Mahasiswa)
+│   ├── _layout.tsx              # Root layout (stack navigation + auth guard)
+│   ├── (tabs)/                  # Folder untuk tab navigation (dashboard, fakultas, prodi, mahasiswa, info)
+│   │   ├── _layout.tsx          # Layout untuk tab navigation + proteksi login
+│   │   ├── index.tsx            # Halaman dashboard ringkasan
 │   │   ├── prodi.tsx            # Halaman List Prodi
 │   │   └── explore.tsx          # Halaman Info Aplikasi
+│   │
+│   ├── auth/                    # Halaman autentikasi (login & registrasi)
+│   │   ├── login.tsx
+│   │   └── register.tsx
 │   │
 │   ├── mahasiswa/               # Folder untuk halaman mahasiswa
 │   │   ├── add.tsx              # Form tambah mahasiswa
@@ -122,7 +127,11 @@ belajar_db/
 │   └── Colors.ts                # Warna tema aplikasi
 │
 ├── hooks/                       # Folder untuk custom hooks
+│   ├── use-auth.ts              # Hook untuk mengakses AuthContext
 │   └── use-color-scheme.ts      # Hook untuk detect dark/light mode
+│
+├── context/                     # Folder untuk context global
+│   └── auth-context.tsx         # Provider untuk autentikasi dan sesi user
 │
 ├── assets/                      # Folder untuk assets (gambar, icon, dll)
 │   └── images/                  # Folder untuk gambar
@@ -381,6 +390,11 @@ Buka tab **"Info"** untuk melihat:
 - Pesan error yang jelas untuk setiap kondisi
 - Alert untuk konfirmasi tindakan penting
 
+✅ **Login & Registrasi Sederhana:**
+- Autentikasi berbasis tabel `users`
+- Penyimpanan sesi lokal via SecureStore
+- Guard otomatis untuk melindungi halaman/tab utama
+
 ✅ **Responsive Design:**
 - Layout yang adaptif untuk berbagai ukuran layar
 - Safe area handling untuk notch/home indicator
@@ -390,7 +404,55 @@ Buka tab **"Info"** untuk melihat:
 
 ---
 
-## 8. Troubleshooting
+## 8. Fitur Login & Manajemen Sesi (Baru)
+
+Fitur ini memperkenalkan autentikasi dasar berbasis SQLite agar data dashboard hanya bisa diakses setelah user login.
+
+### 8.1. Instalasi Dependensi Tambahan
+
+Pastikan sudah menambahkan package berikut (otomatis bila mengikuti branch terbaru):
+```bash
+npm install expo-secure-store
+```
+
+### 8.2. Struktur Folder Baru
+
+- `context/auth-context.tsx` – menyimpan state login, fungsi `login`, `register`, dan `logout`
+- `hooks/use-auth.ts` – helper hook untuk mengakses AuthContext
+- `app/auth/login.tsx` & `app/auth/register.tsx` – layar autentikasi
+- `app/(tabs)/_layout.tsx` – ditambahkan guard agar tab hanya tampil setelah login
+
+### 8.3. Cara Menggunakan
+
+1. Jalankan aplikasi → layar login akan tampil.
+2. Pilih “Daftar sekarang” untuk membuat akun baru.
+3. Setelah registrasi berhasil, kembali ke login dan masuk menggunakan email/password yang dibuat.
+4. Dashboard akan menampilkan data, dengan tombol `Keluar` di bagian atas untuk logout.
+
+### 8.4. Meng-update Aplikasi Lama (Tanpa Login)
+
+Jika sebelumnya Anda sudah memakai versi aplikasi tanpa fitur login, lakukan langkah berikut:
+
+1. **Pull/update kode terbaru** atau salin folder/file berikut:
+   - `context/auth-context.tsx`
+   - `hooks/use-auth.ts`
+   - `app/auth/login.tsx`
+   - `app/auth/register.tsx`
+   - Update `app/_layout.tsx` dan `app/(tabs)/_layout.tsx` sesuai perubahan terbaru.
+2. **Install dependency SecureStore**:
+   ```bash
+   npm install expo-secure-store
+   ```
+3. **Perbarui `utils/database.ts`** untuk memastikan tabel `users` dibuat.
+4. **Jalankan ulang Metro bundler**:
+   ```bash
+   npm start -- --clear
+   ```
+5. Pastikan Anda logout sebelum menutup aplikasi agar sesi bersih saat pengujian.
+
+---
+
+## 9. Troubleshooting
 
 ### Masalah Umum dan Solusinya:
 
@@ -457,7 +519,7 @@ npm install --save-dev @types/react @types/react-native typescript
 
 ---
 
-## 9. Informasi Developer
+## 10. Informasi Developer
 
 ### Aplikasi: Belajar Database
 **Versi:** 1.0.0  
