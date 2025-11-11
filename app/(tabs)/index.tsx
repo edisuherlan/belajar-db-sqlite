@@ -1,299 +1,437 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { deleteMahasiswa, getAllMahasiswa, initDatabase, searchMahasiswa, type Mahasiswa } from '@/utils/database';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+    getAllFakultas,
+    getAllMahasiswa,
+    getAllProdi,
+    getRecentMahasiswa,
+    type Mahasiswa,
+} from '@/utils/database';
+import { Ionicons } from '@expo/vector-icons';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
- * Komponen Halaman Daftar Mahasiswa
- * Menampilkan daftar semua mahasiswa yang tersimpan di database
- * Fitur: tampil data, pencarian, tambah, edit, hapus, dan pull-to-refresh
+ * ============================================================
+ *  Dashboard Mahasiswa (Halaman Utama)
+ * ============================================================
+ *  Memberikan ringkasan singkat mengenai data akademik:
+ *    - Statistik jumlah entitas
+ *    - Insight semester
+ *    - Pintasan aksi dan daftar mahasiswa terbaru
+ *  Tujuan utamanya adalah membantu pengguna memahami keadaan
+ *  database secara cepat dan melakukan aksi penting dengan mudah.
+ * ============================================================
  */
-export default function MahasiswaScreen() {
-  // State untuk menyimpan daftar mahasiswa
-  const [mahasiswaList, setMahasiswaList] = useState<Mahasiswa[]>([]);
-  // State untuk menyimpan keyword pencarian
-  const [searchQuery, setSearchQuery] = useState('');
-  // State untuk menandai apakah data sedang dimuat (saat pertama kali buka halaman)
+
+type DashboardStats = {
+  totalMahasiswa: number;
+  totalProdi: number;
+  totalFakultas: number;
+  avgSemester: number;
+  highestSemester: number;
+  lowestSemester: number;
+  lastCreatedAt: string | null;
+};
+
+const initialStats: DashboardStats = {
+  totalMahasiswa: 0,
+  totalProdi: 0,
+  totalFakultas: 0,
+  avgSemester: 0,
+  highestSemester: 0,
+  lowestSemester: 0,
+  lastCreatedAt: null,
+};
+
+const getGreetingMessage = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Selamat pagi';
+  if (hour < 15) return 'Selamat siang';
+  if (hour < 18) return 'Selamat sore';
+  return 'Selamat malam';
+};
+
+const formatSemesterAverage = (value: number, hasData: boolean) => {
+  if (!hasData) {
+    return '-';
+  }
+  return value.toFixed(1).replace('.', ',');
+};
+
+const formatTimestamp = (value: string | null) => {
+  if (!value) {
+    return '-';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+  return new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'full',
+    timeStyle: 'short',
+  }).format(date);
+};
+
+export default function DashboardMahasiswaScreen() {
+  // ------------------------------------------------------------
+  // STATE MANAGEMENT
+  // ------------------------------------------------------------
+  const [stats, setStats] = useState<DashboardStats>(initialStats);
+  const [recentMahasiswa, setRecentMahasiswa] = useState<Mahasiswa[]>([]);
   const [loading, setLoading] = useState(true);
-  // State untuk menandai apakah sedang melakukan refresh (pull-to-refresh)
   const [refreshing, setRefreshing] = useState(false);
-  // Router untuk navigasi ke halaman lain
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
+  const { width } = useWindowDimensions();
 
-  // useEffect untuk menjalankan fungsi initialization saat komponen pertama kali dimount
-  useEffect(() => {
-    initializeAndLoadData();
-  }, []);
+  // ------------------------------------------------------------
+  // DATA FETCHING
+  // ------------------------------------------------------------
+  const loadDashboardData = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const isSilent = options?.silent;
+      if (isSilent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
-  // useEffect untuk melakukan pencarian otomatis ketika searchQuery berubah
-  useEffect(() => {
-    // Jika searchQuery kosong, tampilkan semua data
-    // Jika tidak kosong, lakukan pencarian
-    if (searchQuery.trim() === '') {
-      loadMahasiswa();
-    } else {
-      handleSearch(searchQuery);
-    }
-  }, [searchQuery]);
+      try {
+        const [mahasiswaList, prodiList, fakultasList, recentList] = await Promise.all([
+          getAllMahasiswa(),
+          getAllProdi(),
+          getAllFakultas(),
+          getRecentMahasiswa(5),
+        ]);
 
-  /**
-   * Fungsi untuk menginisialisasi database dan memuat data mahasiswa
-   * Dipanggil saat halaman pertama kali dibuka
-   */
-  const initializeAndLoadData = async () => {
-    try {
-      // Pastikan database sudah ter-initialize
-      await initDatabase();
-      // Muat data mahasiswa dari database
-      await loadMahasiswa();
-    } catch (error) {
-      console.error('Error initializing:', error);
-      Alert.alert('Error', 'Gagal memuat database');
-    } finally {
-      // Set loading menjadi false setelah selesai (baik berhasil maupun gagal)
-      setLoading(false);
-    }
-  };
+        const semesterValues = mahasiswaList
+          .map((item) => item.semester)
+          .filter((value) => typeof value === 'number' && !Number.isNaN(value));
 
-  /**
-   * Fungsi untuk memuat semua data mahasiswa dari database
-   */
-  const loadMahasiswa = async () => {
-    try {
-      // Ambil semua data mahasiswa dari database
-      const data = await getAllMahasiswa();
-      // Update state dengan data yang diperoleh
-      setMahasiswaList(data);
-    } catch (error) {
-      console.error('Error loading mahasiswa:', error);
-      Alert.alert('Error', 'Gagal memuat data mahasiswa');
-    }
-  };
+        const totalSemester = semesterValues.reduce((sum, value) => sum + value, 0);
+        const avgSemester =
+          semesterValues.length > 0 ? totalSemester / semesterValues.length : 0;
+        const highestSemester =
+          semesterValues.length > 0 ? Math.max(...semesterValues) : 0;
+        const lowestSemester =
+          semesterValues.length > 0 ? Math.min(...semesterValues) : 0;
 
-  /**
-   * Fungsi untuk melakukan pencarian mahasiswa berdasarkan keyword
-   * @param keyword - Kata kunci untuk pencarian
-   */
-  const handleSearch = async (keyword: string) => {
-    // Jika keyword kosong, tampilkan semua data
-    if (keyword.trim() === '') {
-      loadMahasiswa();
-      return;
-    }
-    try {
-      // Lakukan pencarian di database berdasarkan keyword
-      const results = await searchMahasiswa(keyword);
-      // Update state dengan hasil pencarian
-      setMahasiswaList(results);
-    } catch (error) {
-      console.error('Error searching:', error);
-    }
-  };
+        setStats({
+          totalMahasiswa: mahasiswaList.length,
+          totalProdi: prodiList.length,
+          totalFakultas: fakultasList.length,
+          avgSemester,
+          highestSemester,
+          lowestSemester,
+          lastCreatedAt: recentList[0]?.created_at ?? null,
+        });
 
-  /**
-   * Fungsi untuk menghapus data mahasiswa
-   * Menampilkan konfirmasi sebelum menghapus
-   * @param id - ID mahasiswa yang ingin dihapus
-   * @param nama - Nama mahasiswa (untuk ditampilkan di konfirmasi)
-   */
-  const handleDelete = (id: number, nama: string) => {
-    // Tampilkan dialog konfirmasi sebelum menghapus
-    Alert.alert(
-      'Hapus Mahasiswa',
-      `Apakah Anda yakin ingin menghapus ${nama}?`,
-      [
-        { text: 'Batal', style: 'cancel' }, // Tombol batal
-        {
-          text: 'Hapus',
-          style: 'destructive', // Tombol hapus dengan style destructive (merah)
-          onPress: async () => {
-            try {
-              // Hapus data dari database
-              await deleteMahasiswa(id);
-              // Muat ulang data setelah berhasil menghapus
-              await loadMahasiswa();
-              // Tampilkan notifikasi sukses
-              Alert.alert('Sukses', 'Mahasiswa berhasil dihapus');
-            } catch (error) {
-              console.error('Error deleting:', error);
-              Alert.alert('Error', 'Gagal menghapus mahasiswa');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  /**
-   * Fungsi untuk refresh data (pull-to-refresh)
-   * Dipanggil ketika user melakukan gesture pull-to-refresh
-   */
-  const onRefresh = async () => {
-    setRefreshing(true); // Set refreshing menjadi true untuk menampilkan indicator
-    await loadMahasiswa(); // Muat ulang data dari database
-    setRefreshing(false); // Set refreshing menjadi false setelah selesai
-  };
-
-  /**
-   * Komponen untuk render setiap item mahasiswa di dalam FlatList
-   * @param item - Data mahasiswa yang akan dirender
-   */
-  const renderMahasiswaItem = ({ item }: { item: Mahasiswa }) => (
-    <View style={styles.card}>
-      <View style={styles.cardContent}>
-        {/* Header card: nama mahasiswa dan tombol aksi */}
-        <View style={styles.cardHeader}>
-          <ThemedText type="defaultSemiBold" style={styles.nama}>
-            {item.nama}
-          </ThemedText>
-          {/* Tombol edit dan hapus */}
-          <View style={styles.actionButtons}>
-            {/* Tombol edit: navigasi ke halaman edit */}
-            <TouchableOpacity
-              onPress={() => {
-                if (item.id) {
-                  router.push(`/mahasiswa/${item.id}` as any);
-                }
-              }}
-              style={[styles.iconButton, styles.editButton]}>
-              <Ionicons name="create-outline" size={20} color="#4A90E2" />
-            </TouchableOpacity>
-            {/* Tombol hapus: tampilkan konfirmasi dan hapus data */}
-            <TouchableOpacity
-              onPress={() => {
-                if (item.id) {
-                  handleDelete(item.id, item.nama);
-                }
-              }}
-              style={[styles.iconButton, styles.deleteButton]}>
-              <Ionicons name="trash-outline" size={20} color="#E74C3C" />
-            </TouchableOpacity>
-          </View>
-        </View>
-        {/* Detail card: informasi lengkap mahasiswa */}
-        <View style={styles.cardDetail}>
-          {/* Baris detail: NIM */}
-          <View style={styles.detailRow}>
-            <Ionicons name="id-card-outline" size={16} color="#666" />
-            <ThemedText style={styles.detailText}>NIM: {item.nim}</ThemedText>
-          </View>
-          {/* Baris detail: Jurusan */}
-          <View style={styles.detailRow}>
-            <Ionicons name="school-outline" size={16} color="#666" />
-            <ThemedText style={styles.detailText}>{item.jurusan}</ThemedText>
-          </View>
-          {/* Baris detail: Semester */}
-          <View style={styles.detailRow}>
-            <Ionicons name="calendar-outline" size={16} color="#666" />
-            <ThemedText style={styles.detailText}>Semester {item.semester}</ThemedText>
-          </View>
-          {/* Baris detail: Email */}
-          <View style={styles.detailRow}>
-            <Ionicons name="mail-outline" size={16} color="#666" />
-            <ThemedText style={styles.detailText}>{item.email}</ThemedText>
-          </View>
-        </View>
-      </View>
-    </View>
+        setRecentMahasiswa(recentList);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        Alert.alert('Error', 'Gagal memuat data dashboard');
+      } finally {
+        if (isSilent) {
+          setRefreshing(false);
+        } else {
+          setLoading(false);
+        }
+      }
+    },
+    []
   );
 
-  // Tampilkan loading indicator saat data sedang dimuat pertama kali
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  const handleRefresh = () => {
+    loadDashboardData({ silent: true });
+  };
+
+  // ------------------------------------------------------------
+  // DERIVED DATA
+  // ------------------------------------------------------------
+  const statsCards = useMemo(
+    () => [
+      {
+        key: 'mahasiswa',
+        title: 'Total Mahasiswa',
+        value: stats.totalMahasiswa.toString(),
+        icon: 'people',
+        accent: '#4A90E2',
+      },
+      {
+        key: 'prodi',
+        title: 'Total Prodi',
+        value: stats.totalProdi.toString(),
+        icon: 'library',
+        accent: '#6C5CE7',
+      },
+      {
+        key: 'fakultas',
+        title: 'Total Fakultas',
+        value: stats.totalFakultas.toString(),
+        icon: 'school',
+        accent: '#00B894',
+      },
+    ],
+    [stats.totalMahasiswa, stats.totalProdi, stats.totalFakultas]
+  );
+
+  const hasSemesterData = stats.totalMahasiswa > 0 && stats.highestSemester > 0;
+
+  const semesterInsights = useMemo(
+    () => [
+      {
+        key: 'avg',
+        label: 'Rata-rata Semester',
+        value: formatSemesterAverage(stats.avgSemester, hasSemesterData),
+      },
+      {
+        key: 'max',
+        label: 'Semester Tertinggi',
+        value: hasSemesterData ? stats.highestSemester : '-',
+      },
+      {
+        key: 'min',
+        label: 'Semester Terendah',
+        value: hasSemesterData ? stats.lowestSemester : '-',
+      },
+    ],
+    [hasSemesterData, stats.avgSemester, stats.highestSemester, stats.lowestSemester]
+  );
+
+  const quickActions = useMemo(
+    () => [
+      {
+        key: 'addMahasiswa',
+        label: 'Tambah Mahasiswa',
+        icon: 'person-add',
+        action: () => router.push('/mahasiswa/add' as any),
+      },
+      {
+        key: 'manageMahasiswa',
+        label: 'Kelola Mahasiswa',
+        icon: 'list-circle',
+        action: () => router.push('/mahasiswa' as any),
+      },
+      {
+        key: 'addProdi',
+        label: 'Tambah Prodi',
+        icon: 'library-outline',
+        action: () => router.push('/prodi/add' as any),
+      },
+      {
+        key: 'addFakultas',
+        label: 'Tambah Fakultas',
+        icon: 'school-outline',
+        action: () => router.push('/fakultas/add' as any),
+      },
+    ],
+    [router]
+  );
+
+  // ------------------------------------------------------------
+  // RENDER
+  // ------------------------------------------------------------
   if (loading) {
     return (
-      <ThemedView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4A90E2" />
-          <ThemedText style={styles.loadingText}>Memuat data...</ThemedText>
-        </View>
+      <ThemedView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4A90E2" />
+        <ThemedText style={styles.loadingText}>Menyiapkan dashboard...</ThemedText>
       </ThemedView>
     );
   }
 
   return (
-    <ThemedView style={styles.container}>
-      {/* Header halaman: judul dan tombol tambah */}
-      <View style={styles.header}>
-        <ThemedText type="title" style={styles.title}>
-          Data Mahasiswa
-        </ThemedText>
-        {/* Tombol untuk navigasi ke halaman tambah mahasiswa */}
-        <TouchableOpacity
-          onPress={() => router.push('/mahasiswa/add' as any)}
-          style={styles.addButton}>
-          <Ionicons name="add-circle" size={24} color="#FFF" />
-          <ThemedText style={styles.addButtonText}>Tambah</ThemedText>
-        </TouchableOpacity>
-      </View>
+    <ThemedView style={[styles.container, { paddingTop: insets.top + 16 }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingBottom: 32 + insets.bottom + tabBarHeight },
+        ]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }>
+        {/* --------------------------------------------------------
+            HEADER
+            -------------------------------------------------------- */}
+        <View style={styles.header}>
+          <View style={styles.headerText}>
+            <ThemedText type="title" style={styles.greeting}>
+              {getGreetingMessage()} 👋
+            </ThemedText>
+            <ThemedText style={styles.subtitle}>
+              Pantau ringkasan data akademik Anda di sini.
+            </ThemedText>
+          </View>
+          <View style={styles.headerIconContainer}>
+            <Ionicons name="analytics" size={28} color="#4A90E2" />
+          </View>
+        </View>
 
-      {/* Container untuk search bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-        {/* Input untuk pencarian */}
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Cari mahasiswa..."
-          placeholderTextColor="#999"
-          value={searchQuery}
-          onChangeText={setSearchQuery} // Update searchQuery setiap kali user mengetik
-        />
-        {/* Tombol untuk clear search (hanya tampil jika ada text di search) */}
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-            <Ionicons name="close-circle" size={20} color="#999" />
-          </TouchableOpacity>
-        )}
-      </View>
+        {/* --------------------------------------------------------
+            STATISTIC CARDS
+            -------------------------------------------------------- */}
+        <View style={styles.statsGrid}>
+          {statsCards.map((card) => (
+            <View key={card.key} style={styles.statCard}>
+              <View style={[styles.statIconWrapper, { backgroundColor: `${card.accent}20` }]}>
+                <Ionicons name={card.icon as any} size={20} color={card.accent} />
+              </View>
+              <ThemedText style={styles.statLabel}>{card.title}</ThemedText>
+              <ThemedText type="title" style={styles.statValue}>
+                {card.value}
+              </ThemedText>
+            </View>
+          ))}
+        </View>
 
-      {/* Tampilkan empty state jika tidak ada data */}
-      {mahasiswaList.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="people-outline" size={64} color="#CCC" />
-          <ThemedText style={styles.emptyText}>
-            {searchQuery ? 'Tidak ada hasil pencarian' : 'Belum ada data mahasiswa'}
-          </ThemedText>
-          {/* Tombol tambah mahasiswa pertama (hanya tampil jika tidak ada pencarian) */}
-          {!searchQuery && (
-            <TouchableOpacity
-              onPress={() => router.push('/mahasiswa/add' as any)}
-              style={styles.emptyAddButton}>
-              <ThemedText style={styles.emptyAddButtonText}>Tambah Mahasiswa Pertama</ThemedText>
-            </TouchableOpacity>
+        {/* --------------------------------------------------------
+            SEMESTER INSIGHTS
+            -------------------------------------------------------- */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+              Insight Semester
+            </ThemedText>
+            <ThemedText style={styles.sectionSubtitle}>
+              Data dari {stats.totalMahasiswa} mahasiswa aktif
+            </ThemedText>
+          </View>
+          <View style={styles.insightsRow}>
+            {semesterInsights.map((item) => (
+              <View key={item.key} style={styles.insightCard}>
+                <ThemedText style={styles.insightLabel}>{item.label}</ThemedText>
+                <ThemedText style={styles.insightValue}>{item.value}</ThemedText>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* --------------------------------------------------------
+            QUICK ACTIONS
+            -------------------------------------------------------- */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+              Aksi Cepat
+            </ThemedText>
+            <ThemedText style={styles.sectionSubtitle}>
+              Kelola data dengan pintasan berikut
+            </ThemedText>
+          </View>
+          <View style={styles.quickActionsGrid}>
+            {quickActions.map((action) => (
+              <TouchableOpacity
+                key={action.key}
+                style={[
+                  styles.quickActionButton,
+                  width >= 768
+                    ? styles.quickActionButtonWide
+                    : styles.quickActionButtonDefault,
+                ]}
+                onPress={action.action}>
+                <View style={styles.quickActionLeft}>
+                  <View style={styles.quickActionIcon}>
+                    <Ionicons name={action.icon as any} size={20} color="#4A90E2" />
+                  </View>
+                  <ThemedText style={styles.quickActionLabel}>{action.label}</ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#4A90E2" />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* --------------------------------------------------------
+            RECENT STUDENTS
+            -------------------------------------------------------- */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+              Mahasiswa Terbaru
+            </ThemedText>
+            <ThemedText style={styles.sectionSubtitle}>
+              Terakhir diperbarui: {formatTimestamp(stats.lastCreatedAt)}
+            </ThemedText>
+          </View>
+
+          {recentMahasiswa.length === 0 ? (
+            <View style={styles.emptyStateCard}>
+              <Ionicons name="alert-circle-outline" size={28} color="#999" />
+              <ThemedText style={styles.emptyStateTitle}>
+                Belum ada data mahasiswa
+              </ThemedText>
+              <ThemedText style={styles.emptyStateSubtitle}>
+                Tambahkan mahasiswa pertama Anda melalui tombol aksi cepat.
+              </ThemedText>
+            </View>
+          ) : (
+            <View style={styles.recentList}>
+              {recentMahasiswa.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.recentItem}
+                  onPress={() => {
+                    if (item.id) {
+                      router.push(`/mahasiswa/${item.id}` as any);
+                    }
+                  }}>
+                  <View style={styles.recentLeft}>
+                    <View style={styles.recentAvatar}>
+                      <Ionicons name="person-circle" size={36} color="#4A90E2" />
+                    </View>
+                    <View style={styles.recentInfo}>
+                      <ThemedText type="defaultSemiBold" style={styles.recentName}>
+                        {item.nama}
+                      </ThemedText>
+                      <ThemedText style={styles.recentSubtext}>
+                        {item.jurusan} • Semester {item.semester}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#999" />
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
         </View>
-      ) : (
-        /* FlatList untuk menampilkan daftar mahasiswa */
-        <FlatList
-          data={mahasiswaList} // Data yang akan ditampilkan
-          renderItem={renderMahasiswaItem} // Fungsi untuk render setiap item
-          keyExtractor={(item) => item.id?.toString() || Math.random().toString()} // Key unik untuk setiap item
-          contentContainerStyle={styles.listContent} // Style untuk container list
-          refreshControl={
-            // RefreshControl untuk pull-to-refresh functionality
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        />
-      )}
+      </ScrollView>
     </ThemedView>
   );
 }
 
-// Stylesheet untuk styling komponen
+// ------------------------------------------------------------
+// STYLES
+// ------------------------------------------------------------
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60, // Padding atas untuk status bar
+  },
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 40,
+    gap: 24,
   },
   loadingContainer: {
     flex: 1,
@@ -308,125 +446,212 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    backgroundColor: '#E9F2FF',
+    padding: 20,
+    borderRadius: 16,
   },
-  title: {
+  headerText: {
     flex: 1,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4A90E2',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
     gap: 6,
   },
-  addButtonText: {
-    color: '#FFF',
-    fontWeight: '600',
+  greeting: {
+    fontSize: 22,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+  subtitle: {
+    color: '#4A5568',
+    fontSize: 14,
   },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#000',
-  },
-  clearButton: {
-    padding: 4,
-  },
-  listContent: {
-    padding: 16,
-    paddingTop: 0,
-  },
-  card: {
+  headerIconContainer: {
     backgroundColor: '#FFF',
-    borderRadius: 12,
-    marginBottom: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3, // Shadow untuk Android
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    elevation: 3,
   },
-  cardContent: {
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  statCard: {
+    flexBasis: '48%',
+    backgroundColor: '#FFF',
+    borderRadius: 14,
     padding: 16,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+    gap: 12,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  nama: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  iconButton: {
-    padding: 8,
-    borderRadius: 6,
-  },
-  editButton: {
-    backgroundColor: '#E3F2FD', // Background biru muda untuk tombol edit
-  },
-  deleteButton: {
-    backgroundColor: '#FFEBEE', // Background merah muda untuk tombol hapus
-  },
-  cardDetail: {
-    gap: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  detailText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  emptyContainer: {
-    flex: 1,
+  statIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
   },
-  emptyText: {
+  statLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  section: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  sectionHeader: {
+    gap: 4,
+  },
+  sectionTitle: {
     fontSize: 16,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 24,
   },
-  emptyAddButton: {
-    backgroundColor: '#4A90E2',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
   },
-  emptyAddButtonText: {
-    color: '#FFF',
+  insightsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  insightCard: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 14,
+    gap: 6,
+  },
+  insightLabel: {
+    color: '#64748B',
+    fontSize: 13,
+  },
+  insightValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  quickActionsGrid: {
+    flexDirection: 'column',
+    gap: 12,
+  },
+  quickActionButton: {
+    backgroundColor: '#E9F2FF',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#D6E4FF',
+  },
+  quickActionButtonDefault: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  quickActionButtonWide: {
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  quickActionLeft: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  quickActionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  quickActionLabel: {
+    fontSize: 14,
+    color: '#1F2937',
     fontWeight: '600',
   },
+  recentList: {
+    gap: 12,
+  },
+  recentItem: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  recentLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  recentAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E0ECFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recentInfo: {
+    flex: 1,
+  },
+  recentName: {
+    fontSize: 15,
+    marginBottom: 2,
+  },
+  recentSubtext: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  emptyStateCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  emptyStateTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  emptyStateSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
 });
+

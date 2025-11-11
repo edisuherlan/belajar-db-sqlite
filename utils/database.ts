@@ -1,6 +1,40 @@
 import * as SQLite from 'expo-sqlite';
 
 /**
+ * ============================================================
+ *  Panduan Singkat File database.ts
+ * ============================================================
+ *  Tujuan:
+ *    - Menyediakan lapisan akses data (Data Access Layer) berbasis SQLite
+ *      untuk entitas Mahasiswa, Prodi, dan Fakultas.
+ *
+ *  Cara Pakai:
+ *    1. Pastikan `initDatabase()` terpanggil sekali di awal aplikasi
+ *       (contoh: pada screen utama atau di root layout).
+ *    2. Gunakan fungsi CRUD sesuai entitas:
+ *         • Mahasiswa  : addMahasiswa, getAllMahasiswa, getMahasiswaById, updateMahasiswa, deleteMahasiswa
+ *         • Prodi      : addProdi, getAllProdi, getProdiById, updateProdi, deleteProdi
+ *         • Fakultas   : addFakultas, getAllFakultas, getFakultasById, updateFakultas, deleteFakultas
+ *    3. Untuk pencarian, gunakan fungsi `search*` yang sudah disediakan.
+ *    4. Semua fungsi akan secara otomatis memastikan koneksi database tersedia.
+ *
+ *  Tips:
+ *    - Jika menambah kolom baru, update interface TypeScript dan query INSERT/UPDATE.
+ *    - Gunakan `?? null` saat menulis data opsional agar tersimpan sebagai NULL di SQLite.
+ *    - Perhatikan try/catch agar error mudah dilacak melalui log.
+ *
+ *  Struktur File:
+ *    - Inisialisasi database + helper `getDatabase`
+ *    - CRUD Mahasiswa
+ *    - CRUD Prodi
+ *    - CRUD Fakultas
+ *
+ *  Semua fungsi ditulis asynchronous (Promise-based) untuk memudahkan
+ *  pemanggilan dengan async/await pada komponen React Native.
+ * ============================================================
+ */
+
+/**
  * Interface untuk data Mahasiswa
  * Mendefinisikan struktur data mahasiswa yang akan disimpan di database
  */
@@ -9,8 +43,10 @@ export interface Mahasiswa {
   nim: string; // Nomor Induk Mahasiswa (harus unik)
   nama: string; // Nama lengkap mahasiswa
   jurusan: string; // Jurusan/program studi mahasiswa
+  fakultas: string | null; // Fakultas asal mahasiswa
   semester: number; // Semester yang sedang ditempuh (1-14)
   email: string; // Email mahasiswa
+  created_at?: string | null; // Timestamp pembuatan (otomatis dari database)
 }
 
 /**
@@ -66,6 +102,9 @@ export const initDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
   initPromise = (async () => {
     let database: SQLite.SQLiteDatabase | null = null;
     try {
+      // ----------------------------------------------------
+      // Langkah 1: Membuka koneksi database
+      // ----------------------------------------------------
       // Buka koneksi ke database SQLite
       // Nama file database: mahasiswa.db
       console.log('Opening database...');
@@ -77,6 +116,9 @@ export const initDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
         throw new Error('Failed to open database: database object is null');
       }
 
+      // ----------------------------------------------------
+      // Langkah 2: Membuat tabel mahasiswa (jika belum ada)
+      // ----------------------------------------------------
       // Buat tabel mahasiswa jika belum ada
       // Menggunakan IF NOT EXISTS agar tidak error jika tabel sudah ada
       console.log('Creating mahasiswa table...');
@@ -85,13 +127,32 @@ export const initDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
         nim TEXT UNIQUE NOT NULL, -- NIM harus unik dan tidak boleh kosong
         nama TEXT NOT NULL, -- Nama tidak boleh kosong
         jurusan TEXT NOT NULL, -- Jurusan tidak boleh kosong
+        fakultas TEXT, -- Fakultas mahasiswa
         semester INTEGER NOT NULL, -- Semester harus berupa angka
         email TEXT NOT NULL, -- Email tidak boleh kosong
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP -- Timestamp otomatis saat data dibuat
       )`;
       await database.execAsync(mahasiswaTableSQL);
       console.log('Mahasiswa table created');
+
+      // Pastikan kolom fakultas tersedia (untuk database lama yang belum memiliki kolom ini)
+      try {
+        // ALTER TABLE akan gagal jika kolom sudah ada, oleh karena itu dibungkus try/catch
+        console.log('Ensuring fakultas column exists in mahasiswa table...');
+        await database.execAsync(`ALTER TABLE mahasiswa ADD COLUMN fakultas TEXT`);
+        console.log('Fakultas column added to mahasiswa table');
+      } catch (alterError: any) {
+        const message = alterError?.message || '';
+        if (message.includes('duplicate column name') || message.includes('already exists')) {
+          console.log('Fakultas column already exists in mahasiswa table');
+        } else {
+          console.error('Error ensuring fakultas column on mahasiswa table:', alterError);
+        }
+      }
       
+      // ----------------------------------------------------
+      // Langkah 3: Membuat tabel prodi (jika belum ada)
+      // ----------------------------------------------------
       // Buat tabel prodi jika belum ada
       console.log('Creating prodi table...');
       const prodiTableSQL = `CREATE TABLE IF NOT EXISTS prodi (
@@ -106,6 +167,9 @@ export const initDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
       await database.execAsync(prodiTableSQL);
       console.log('Prodi table created');
       
+      // ----------------------------------------------------
+      // Langkah 4: Membuat tabel fakultas (jika belum ada)
+      // ----------------------------------------------------
       // Buat tabel fakultas jika belum ada
       console.log('Creating fakultas table...');
       const fakultasTableSQL = `CREATE TABLE IF NOT EXISTS fakultas (
@@ -162,6 +226,7 @@ export const getDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
   if (!db) {
     console.log('Database not initialized, initializing now...');
     const database = await initDatabase();
+    // Setelah init, pastikan instance valid
     // Validasi: pastikan database tidak null setelah initialization
     if (!database) {
       throw new Error('Failed to get database: database object is null after initialization');
@@ -189,10 +254,18 @@ export const addMahasiswa = async (mahasiswa: Omit<Mahasiswa, 'id'>): Promise<nu
     // Dapatkan instance database
     const database = await getDatabase();
     // Eksekusi query INSERT dengan prepared statement untuk mencegah SQL injection
+    // Urutan parameter harus sesuai dengan placeholder (?) pada query
     const result = await database.runAsync(
-      `INSERT INTO mahasiswa (nim, nama, jurusan, semester, email) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [mahasiswa.nim, mahasiswa.nama, mahasiswa.jurusan, mahasiswa.semester, mahasiswa.email]
+      `INSERT INTO mahasiswa (nim, nama, jurusan, fakultas, semester, email) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        mahasiswa.nim,
+        mahasiswa.nama,
+        mahasiswa.jurusan,
+        mahasiswa.fakultas ?? null,
+        mahasiswa.semester,
+        mahasiswa.email,
+      ]
     );
     // Kembalikan ID yang baru saja dibuat
     return result.lastInsertRowId;
@@ -212,7 +285,7 @@ export const getAllMahasiswa = async (): Promise<Mahasiswa[]> => {
     const database = await getDatabase();
     // Query SELECT untuk mengambil semua data, diurutkan berdasarkan nama
     const result = await database.getAllAsync<Mahasiswa>(
-      `SELECT * FROM mahasiswa ORDER BY nama ASC`
+      `SELECT * FROM mahasiswa ORDER BY nama ASC` // Sorting di level SQL untuk efisiensi
     );
     return result;
   } catch (error) {
@@ -231,8 +304,8 @@ export const getMahasiswaById = async (id: number): Promise<Mahasiswa | null> =>
     const database = await getDatabase();
     // Query SELECT dengan WHERE clause untuk mencari berdasarkan ID
     const result = await database.getFirstAsync<Mahasiswa>(
-      `SELECT * FROM mahasiswa WHERE id = ?`,
-      [id]
+      `SELECT * FROM mahasiswa WHERE id = ?`, // ? digantikan nilai id
+      [id] // Parameter bind ke query
     );
     // Kembalikan null jika tidak ditemukan, atau data jika ditemukan
     return result || null;
@@ -254,9 +327,17 @@ export const updateMahasiswa = async (id: number, mahasiswa: Omit<Mahasiswa, 'id
     // Query UPDATE untuk memperbarui data berdasarkan ID
     await database.runAsync(
       `UPDATE mahasiswa 
-       SET nim = ?, nama = ?, jurusan = ?, semester = ?, email = ? 
+       SET nim = ?, nama = ?, jurusan = ?, fakultas = ?, semester = ?, email = ? 
        WHERE id = ?`,
-      [mahasiswa.nim, mahasiswa.nama, mahasiswa.jurusan, mahasiswa.semester, mahasiswa.email, id]
+      [
+        mahasiswa.nim,
+        mahasiswa.nama,
+        mahasiswa.jurusan,
+        mahasiswa.fakultas ?? null,
+        mahasiswa.semester,
+        mahasiswa.email,
+        id,
+      ]
     );
   } catch (error) {
     console.error('Error updating mahasiswa:', error);
@@ -273,7 +354,10 @@ export const deleteMahasiswa = async (id: number): Promise<void> => {
   try {
     const database = await getDatabase();
     // Query DELETE untuk menghapus data berdasarkan ID
-    await database.runAsync(`DELETE FROM mahasiswa WHERE id = ?`, [id]);
+    await database.runAsync(
+      `DELETE FROM mahasiswa WHERE id = ?`, // Hanya satu baris yang dihapus sesuai ID
+      [id]
+    );
   } catch (error) {
     console.error('Error deleting mahasiswa:', error);
     throw error;
@@ -293,13 +377,38 @@ export const searchMahasiswa = async (keyword: string): Promise<Mahasiswa[]> => 
     // Menggunakan %keyword% untuk mencari di bagian manapun dari field
     const result = await database.getAllAsync<Mahasiswa>(
       `SELECT * FROM mahasiswa 
-       WHERE nama LIKE ? OR nim LIKE ? OR jurusan LIKE ? OR email LIKE ?
+       WHERE nama LIKE ? OR nim LIKE ? OR jurusan LIKE ? OR fakultas LIKE ? OR email LIKE ?
        ORDER BY nama ASC`,
-      [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`]
+      [
+        `%${keyword}%`,
+        `%${keyword}%`,
+        `%${keyword}%`,
+        `%${keyword}%`,
+        `%${keyword}%`,
+      ]
     );
     return result;
   } catch (error) {
     console.error('Error searching mahasiswa:', error);
+    throw error;
+  }
+};
+
+/**
+ * READ - Fungsi untuk mengambil sejumlah mahasiswa terbaru berdasarkan created_at
+ * @param limit - Jumlah data yang ingin diambil (default 5)
+ * @returns Promise<Mahasiswa[]> - Array berisi data mahasiswa terbaru
+ */
+export const getRecentMahasiswa = async (limit = 5): Promise<Mahasiswa[]> => {
+  try {
+    const database = await getDatabase();
+    const result = await database.getAllAsync<Mahasiswa>(
+      `SELECT * FROM mahasiswa ORDER BY datetime(created_at) DESC LIMIT ?`,
+      [limit]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error getting recent mahasiswa:', error);
     throw error;
   }
 };
@@ -357,7 +466,7 @@ export const getAllProdi = async (): Promise<Prodi[]> => {
     const database = await getDatabase();
     // Query SELECT untuk mengambil semua data prodi, diurutkan berdasarkan nama
     const result = await database.getAllAsync<Prodi>(
-      `SELECT * FROM prodi ORDER BY nama_prodi ASC`
+      `SELECT * FROM prodi ORDER BY nama_prodi ASC` // Sorting di database mengurangi kerja di JS
     );
     return result;
   } catch (error) {
@@ -377,7 +486,7 @@ export const getProdiById = async (id: number): Promise<Prodi | null> => {
     // Query SELECT dengan WHERE clause untuk mencari berdasarkan ID
     const result = await database.getFirstAsync<Prodi>(
       `SELECT * FROM prodi WHERE id = ?`,
-      [id]
+      [id] // Parameter digantikan ke placeholder
     );
     // Kembalikan null jika tidak ditemukan, atau data jika ditemukan
     return result || null;
@@ -419,7 +528,10 @@ export const deleteProdi = async (id: number): Promise<void> => {
   try {
     const database = await getDatabase();
     // Query DELETE untuk menghapus data berdasarkan ID
-    await database.runAsync(`DELETE FROM prodi WHERE id = ?`, [id]);
+    await database.runAsync(
+      `DELETE FROM prodi WHERE id = ?`,
+      [id]
+    );
   } catch (error) {
     console.error('Error deleting prodi:', error);
     throw error;
@@ -567,7 +679,10 @@ export const deleteFakultas = async (id: number): Promise<void> => {
   try {
     const database = await getDatabase();
     // Query DELETE untuk menghapus data berdasarkan ID
-    await database.runAsync(`DELETE FROM fakultas WHERE id = ?`, [id]);
+    await database.runAsync(
+      `DELETE FROM fakultas WHERE id = ?`,
+      [id]
+    );
   } catch (error) {
     console.error('Error deleting fakultas:', error);
     throw error;

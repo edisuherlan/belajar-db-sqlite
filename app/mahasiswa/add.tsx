@@ -1,6 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { addMahasiswa, getAllProdi, type Prodi } from '@/utils/database';
+import { addMahasiswa, getAllFakultas, getAllProdi, type Fakultas, type Prodi } from '@/utils/database';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -17,6 +17,35 @@ import {
 } from 'react-native';
 
 /**
+ * ============================================================
+ *  Panduan Singkat File add.tsx (Screen Tambah Mahasiswa)
+ * ============================================================
+ *  Tujuan:
+ *    - Menyediakan form lengkap untuk menambahkan mahasiswa baru,
+ *      termasuk pemilihan prodi dan fakultas yang bersumber dari database.
+ *
+ *  Alur Utama:
+ *    1. `useEffect` memanggil `loadInitialData()` saat screen pertama muncul.
+ *    2. `loadInitialData()` menjalankan `loadProdi()` dan `loadFakultas()` paralel.
+ *    3. User mengisi form dan memilih prodi/fakultas via modal dropdown.
+ *    4. `handleSubmit()` melakukan validasi, lalu mengirim data ke `addMahasiswa()`.
+ *    5. Jika sukses, alert muncul dan navigasi kembali (`router.back()`).
+ *
+ *  Tips Modifikasi:
+ *    - Tambah field baru? Update `formData`, tambahkan validasi, dan sertakan di payload.
+ *    - Ingin membatasi pilihan prodi berdasarkan fakultas? Filter `prodiList` setelah memilih fakultas.
+ *    - Selalu tangani error dengan `Alert.alert` agar user tahu apa yang terjadi.
+ *
+ *  Struktur File:
+ *    - State dan inisialisasi data
+ *    - Fungsi load data (prodi & fakultas)
+ *    - Handler pemilihan dropdown
+ *    - Validasi & submit form
+ *    - Render layout form + dua modal pilihan
+ * ============================================================
+ */
+
+/**
  * Komponen Halaman Tambah Mahasiswa
  * Form untuk menambahkan data mahasiswa baru ke database
  * Fitur: input data, validasi form, dropdown pemilihan prodi/jurusan
@@ -27,6 +56,7 @@ export default function AddMahasiswaScreen() {
     nim: '', // Nomor Induk Mahasiswa
     nama: '', // Nama lengkap
     jurusan: '', // Jurusan/prodi (dipilih dari dropdown)
+    fakultas: '', // Fakultas (dipilih dari dropdown)
     semester: '', // Semester (string, akan dikonversi ke number saat submit)
     email: '', // Email
   });
@@ -34,17 +64,39 @@ export default function AddMahasiswaScreen() {
   const [loading, setLoading] = useState(false);
   // State untuk menyimpan daftar prodi (untuk dropdown)
   const [prodiList, setProdiList] = useState<Prodi[]>([]);
+  // State untuk menyimpan daftar fakultas (untuk dropdown)
+  const [fakultasList, setFakultasList] = useState<Fakultas[]>([]);
   // State untuk menandai apakah sedang memuat data prodi
   const [loadingProdi, setLoadingProdi] = useState(true);
+  // State untuk menandai apakah sedang memuat data fakultas
+  const [loadingFakultas, setLoadingFakultas] = useState(true);
   // State untuk mengontrol visibility modal pemilihan prodi
   const [showProdiModal, setShowProdiModal] = useState(false);
+  // State untuk mengontrol visibility modal pemilihan fakultas
+  const [showFakultasModal, setShowFakultasModal] = useState(false);
   // Router untuk navigasi ke halaman lain
   const router = useRouter();
 
   // useEffect untuk memuat data prodi saat komponen pertama kali dimount
   useEffect(() => {
-    loadProdi();
+    loadInitialData();
   }, []);
+
+  /**
+   * ------------------------------------------------------------
+   *  BAGIAN LOAD DATA
+   * ------------------------------------------------------------
+   *  - `loadInitialData` menjalankan fetch prodi & fakultas bersamaan.
+   *  - Masing-masing fungsi load bertanggung jawab memperbarui state
+   *    dan mengatur flag loading agar UI bisa menampilkan indikator.
+   */
+
+  /**
+   * Fungsi untuk memuat data awal (prodi dan fakultas) secara paralel
+   */
+  const loadInitialData = async () => {
+    await Promise.all([loadProdi(), loadFakultas()]);
+  };
 
   /**
    * Fungsi untuk memuat daftar prodi dari database
@@ -66,15 +118,48 @@ export default function AddMahasiswaScreen() {
   };
 
   /**
+   * Fungsi untuk memuat daftar fakultas dari database
+   * Data fakultas digunakan untuk dropdown pemilihan fakultas
+   */
+  const loadFakultas = async () => {
+    try {
+      const data = await getAllFakultas();
+      setFakultasList(data);
+    } catch (error) {
+      console.error('Error loading fakultas:', error);
+      Alert.alert('Error', 'Gagal memuat data fakultas');
+    } finally {
+      setLoadingFakultas(false);
+    }
+  };
+
+  /**
    * Fungsi untuk menangani pemilihan prodi dari dropdown
    * @param prodi - Data prodi yang dipilih
    */
   const handleSelectProdi = (prodi: Prodi) => {
     // Set nama_prodi sebagai jurusan di form data
     // Pastikan selalu string dengan fallback
-    setFormData({ ...formData, jurusan: prodi.nama_prodi || '' });
+    setFormData({
+      ...formData,
+      jurusan: prodi.nama_prodi || '',
+      fakultas: prodi.fakultas || formData.fakultas,
+    });
     // Tutup modal setelah memilih
     setShowProdiModal(false);
+  };
+
+  /**
+   * Handler khusus dropdown fakultas (modal fakultas).
+   * Fokusnya hanya memperbarui nilai fakultas di form dan menutup modal.
+   */
+  /**
+   * Fungsi untuk menangani pemilihan fakultas dari dropdown
+   * @param fakultas - Data fakultas yang dipilih
+   */
+  const handleSelectFakultas = (fakultas: Fakultas) => {
+    setFormData({ ...formData, fakultas: fakultas.nama_fakultas || '' });
+    setShowFakultasModal(false);
   };
 
   /**
@@ -82,6 +167,16 @@ export default function AddMahasiswaScreen() {
    * Melakukan validasi dan menyimpan data mahasiswa ke database
    */
   const handleSubmit = async () => {
+    /**
+     * ----------------------------------------------------------
+     *  BAGIAN VALIDASI
+     * ----------------------------------------------------------
+     *  Semua field wajib dicek:
+     *    - string kosong dicegah dengan `.trim()`
+     *    - semester wajib angka 1-14
+     *    - email diverifikasi memakai regex sederhana
+     */
+
     // Validasi: Pastikan semua field wajib terisi
     if (!formData.nim.trim()) {
       Alert.alert('Error', 'NIM tidak boleh kosong');
@@ -93,6 +188,10 @@ export default function AddMahasiswaScreen() {
     }
     if (!formData.jurusan.trim()) {
       Alert.alert('Error', 'Jurusan tidak boleh kosong');
+      return;
+    }
+    if (!formData.fakultas.trim()) {
+      Alert.alert('Error', 'Fakultas tidak boleh kosong');
       return;
     }
     if (!formData.semester.trim()) {
@@ -127,6 +226,7 @@ export default function AddMahasiswaScreen() {
         nim: formData.nim.trim(),
         nama: formData.nama.trim(),
         jurusan: formData.jurusan.trim(),
+        fakultas: formData.fakultas.trim(),
         semester: semesterNum, // Konversi string ke number
         email: formData.email.trim(),
       });
@@ -202,6 +302,25 @@ export default function AddMahasiswaScreen() {
           </View>
 
           <View style={styles.inputGroup}>
+            <ThemedText style={styles.label}>Fakultas *</ThemedText>
+            <TouchableOpacity
+              style={styles.input}
+              onPress={() => setShowFakultasModal(true)}
+              activeOpacity={0.7}>
+              <ThemedText
+                style={[styles.inputText, !formData.fakultas && styles.placeholderText]}>
+                {formData.fakultas || 'Pilih fakultas'}
+              </ThemedText>
+              <Ionicons name="chevron-down" size={20} color="#666" style={styles.dropdownIcon} />
+            </TouchableOpacity>
+            {fakultasList.length === 0 && !loadingFakultas && (
+              <ThemedText style={styles.hintText}>
+                Belum ada data fakultas. Silakan tambahkan fakultas terlebih dahulu.
+              </ThemedText>
+            )}
+          </View>
+
+          <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Semester *</ThemedText>
             <TextInput
               style={styles.input}
@@ -236,6 +355,12 @@ export default function AddMahasiswaScreen() {
         </View>
       </ScrollView>
 
+      {/* --------------------------------------------------------
+          MODAL PILIH PRODI
+          --------------------------------------------------------
+          Menampilkan daftar prodi dengan indikator loading & empty state.
+          Memanfaatkan FlatList agar performa tetap baik walau data panjang.
+        */}
       <Modal
         visible={showProdiModal}
         transparent={true}
@@ -288,6 +413,70 @@ export default function AddMahasiswaScreen() {
                       )}
                     </View>
                     {formData.jurusan === item.nama_prodi && (
+                      <Ionicons name="checkmark-circle" size={24} color="#4A90E2" />
+                    )}
+                  </TouchableOpacity>
+                )}
+                style={styles.prodiList}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* --------------------------------------------------------
+          MODAL PILIH FAKULTAS
+          --------------------------------------------------------
+          Strukturnya serupa modal prodi, tetapi memuat data fakultas.
+          Penggunaannya terpisah agar pemilihan bisa independen.
+        */}
+      <Modal
+        visible={showFakultasModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFakultasModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={styles.modalTitle}>Pilih Fakultas</ThemedText>
+              <TouchableOpacity
+                onPress={() => setShowFakultasModal(false)}
+                style={styles.modalCloseButton}>
+                <Ionicons name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            {loadingFakultas ? (
+              <View style={styles.modalLoadingContainer}>
+                <ActivityIndicator size="large" color="#4A90E2" />
+                <ThemedText style={styles.modalLoadingText}>Memuat data fakultas...</ThemedText>
+              </View>
+            ) : fakultasList.length === 0 ? (
+              <View style={styles.modalEmptyContainer}>
+                <Ionicons name="business-outline" size={48} color="#999" />
+                <ThemedText style={styles.modalEmptyText}>Belum ada data fakultas</ThemedText>
+                <ThemedText style={styles.modalEmptySubtext}>
+                  Silakan tambahkan fakultas terlebih dahulu
+                </ThemedText>
+              </View>
+            ) : (
+              <FlatList
+                data={fakultasList}
+                keyExtractor={(item) =>
+                  item.id ? item.id.toString() : item.kode_fakultas || Math.random().toString()
+                }
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[
+                      styles.prodiItem,
+                      formData.fakultas === item.nama_fakultas && styles.prodiItemSelected,
+                    ]}
+                    onPress={() => handleSelectFakultas(item)}>
+                    <View style={styles.prodiItemContent}>
+                      <ThemedText style={styles.prodiItemName}>{item.nama_fakultas || ''}</ThemedText>
+                      <ThemedText style={styles.prodiItemCode}>{item.kode_fakultas || ''}</ThemedText>
+                    </View>
+                    {formData.fakultas === item.nama_fakultas && (
                       <Ionicons name="checkmark-circle" size={24} color="#4A90E2" />
                     )}
                   </TouchableOpacity>

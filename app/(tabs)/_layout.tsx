@@ -29,6 +29,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="index"
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint, // Warna ikon dan teks saat aktif
         headerShown: false, // Sembunyikan header default (menggunakan header custom di setiap halaman)
@@ -56,7 +57,18 @@ export default function TabLayout() {
           marginTop: 2, // Margin atas ikon untuk spacing
         },
       }}>
-      {/* Tab 1: Halaman Fakultas - Daftar dan manajemen data fakultas (hierarki tertinggi) */}
+      {/* Tab 1: Dashboard - Ringkasan data mahasiswa (landing page) */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Dashboard', // Label tab
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="analytics" size={24} color={color} /> // Ikon untuk tab dashboard
+          ),
+        }}
+      />
+
+      {/* Tab 2: Halaman Fakultas - Daftar dan manajemen data fakultas (hierarki tertinggi) */}
       <Tabs.Screen
         name="fakultas"
         options={{
@@ -67,7 +79,7 @@ export default function TabLayout() {
         }}
       />
       
-      {/* Tab 2: Halaman Prodi - Daftar dan manajemen data program studi (dibawah fakultas) */}
+      {/* Tab 3: Halaman Prodi - Daftar dan manajemen data program studi (dibawah fakultas) */}
       <Tabs.Screen
         name="prodi"
         options={{
@@ -78,18 +90,16 @@ export default function TabLayout() {
         }}
       />
       
-      {/* Tab 3: Halaman Mahasiswa - Daftar dan manajemen data mahasiswa (data utama) */}
+      {/* Tab 4: Halaman Mahasiswa - Daftar dan manajemen data mahasiswa */}
       <Tabs.Screen
-        name="index"
+        name="mahasiswa"
         options={{
-          title: 'Mahasiswa', // Label tab
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="people" size={24} color={color} /> // Ikon untuk tab mahasiswa
-          ),
+          title: 'Mahasiswa',
+          tabBarIcon: ({ color }) => <Ionicons name="people" size={24} color={color} />,
         }}
       />
       
-      {/* Tab 4: Halaman Info - Informasi aplikasi dan identitas pembuat */}
+      {/* Tab 5: Halaman Info - Informasi aplikasi dan identitas pembuat */}
       <Tabs.Screen
         name="explore"
         options={{

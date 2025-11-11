@@ -160,25 +160,22 @@ export default function EditProdiScreen() {
         <ThemedText type="title" style={styles.title}>
           Edit Prodi
         </ThemedText>
-        <View style={styles.placeholder} /> {/* Placeholder untuk balance layout */}
+        <View style={styles.placeholder} />
       </View>
 
-      {/* ScrollView untuk form yang bisa di-scroll jika terlalu panjang */}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.form}>
-          {/* Input Kode Prodi */}
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Kode Prodi *</ThemedText>
             <TextInput
               style={styles.input}
               placeholder="Contoh: TI, SI, MI"
               value={formData.kode_prodi || ''}
-              onChangeText={(text) => setFormData({ ...formData, kode_prodi: text.toUpperCase() })} // Auto uppercase
+              onChangeText={(text) => setFormData({ ...formData, kode_prodi: text.toUpperCase() })}
               autoCapitalize="characters"
             />
           </View>
 
-          {/* Input Nama Prodi */}
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Nama Prodi *</ThemedText>
             <TextInput
@@ -189,7 +186,6 @@ export default function EditProdiScreen() {
             />
           </View>
 
-          {/* Input Fakultas */}
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Fakultas *</ThemedText>
             <TextInput
@@ -200,7 +196,6 @@ export default function EditProdiScreen() {
             />
           </View>
 
-          {/* Input Akreditasi (opsional) */}
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Akreditasi</ThemedText>
             <TextInput
@@ -211,7 +206,6 @@ export default function EditProdiScreen() {
             />
           </View>
 
-          {/* Input Deskripsi (opsional, multiline) */}
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Deskripsi</ThemedText>
             <TextInput
@@ -225,7 +219,6 @@ export default function EditProdiScreen() {
             />
           </View>
 
-          {/* Tombol Update */}
           <TouchableOpacity
             style={[styles.submitButton, saving && styles.submitButtonDisabled]}
             onPress={handleSubmit}
