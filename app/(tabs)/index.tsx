@@ -1,25 +1,26 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '@/hooks/use-auth';
 import {
-    getAllFakultas,
-    getAllMahasiswa,
-    getAllProdi,
-    getRecentMahasiswa,
-    type Mahasiswa,
+  getAllFakultas,
+  getAllMahasiswa,
+  getAllProdi,
+  getRecentMahasiswa,
+  type Mahasiswa,
 } from '@/utils/database';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -97,6 +98,7 @@ export default function DashboardMahasiswaScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const { width } = useWindowDimensions();
+  const { user, logout } = useAuth(); // Ambil data user aktif & helper logout dari context
 
   // ------------------------------------------------------------
   // DATA FETCHING
@@ -286,6 +288,16 @@ export default function DashboardMahasiswaScreen() {
           </View>
         </View>
 
+        {/* Tombol logout cepat untuk menghapus sesi user */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={() => {
+            logout();
+          }}>
+          <Ionicons name="log-out-outline" size={18} color="#DC2626" />
+          <ThemedText style={styles.logoutText}>Keluar</ThemedText>
+        </TouchableOpacity>
+
         {/* --------------------------------------------------------
             STATISTIC CARDS
             -------------------------------------------------------- */}
@@ -474,6 +486,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  logoutButton: {
+    alignSelf: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
+  },
+  logoutText: {
+    color: '#DC2626',
+    fontWeight: '600',
   },
   statsGrid: {
     flexDirection: 'row',

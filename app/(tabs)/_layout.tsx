@@ -6,7 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useRouter } from 'expo-router';
+import { ActivityIndicator, View } from 'react-native';
 
 /**
  * Komponen Layout untuk Tab Navigation
@@ -20,12 +23,32 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   // Ambil safe area insets untuk menghindari bentrok dengan navigation bar sistem
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { user, initializing } = useAuth();
   
   // Hitung padding bottom yang aman untuk menghindari bentrok dengan navigation bar
   // Di Android, biasanya perlu extra spacing untuk gesture navigation bar
   const safeBottomPadding = Platform.OS === 'android' 
     ? Math.max(insets.bottom, 12) // Minimum 12 untuk Android
     : Math.max(insets.bottom, 8); // Minimum 8 untuk iOS
+
+  React.useEffect(() => {
+    if (!initializing && !user) {
+      router.replace('/auth/login' as any);
+    }
+  }, [initializing, user, router]);
+
+  if (initializing) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <Tabs

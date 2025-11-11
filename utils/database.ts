@@ -50,6 +50,17 @@ export interface Mahasiswa {
 }
 
 /**
+ * Interface untuk data User (autentikasi sederhana)
+ */
+export interface User {
+  id?: number; // ID unik user
+  name: string; // Nama lengkap pengguna
+  email: string; // Email (harus unik)
+  password: string; // Password (disimpan apa adanya untuk contoh sederhana)
+  created_at?: string | null; // Timestamp pembuatan akun
+}
+
+/**
  * Interface untuk data Prodi (Program Studi)
  * Mendefinisikan struktur data program studi yang akan disimpan di database
  */
@@ -134,6 +145,18 @@ export const initDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
       )`;
       await database.execAsync(mahasiswaTableSQL);
       console.log('Mahasiswa table created');
+
+      // Buat tabel users untuk autentikasi sederhana
+      console.log('Creating users table...');
+      const usersTableSQL = `CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`;
+      await database.execAsync(usersTableSQL);
+      console.log('Users table created');
 
       // Pastikan kolom fakultas tersedia (untuk database lama yang belum memiliki kolom ini)
       try {
@@ -409,6 +432,81 @@ export const getRecentMahasiswa = async (limit = 5): Promise<Mahasiswa[]> => {
     return result;
   } catch (error) {
     console.error('Error getting recent mahasiswa:', error);
+    throw error;
+  }
+};
+
+// ==================== AUTH / USERS ====================
+// Kumpulan helper untuk fitur login sederhana berbasis tabel `users`.
+// Password disimpan plain text untuk tujuan belajar—jangan gunakan pola ini
+// di aplikasi produksi tanpa hashing & keamanan tambahan.
+
+/**
+ * CREATE - Registrasi user baru
+ * @param user - data user tanpa ID
+ * @returns Promise<number> - ID user baru
+ */
+export const addUser = async (user: Omit<User, 'id' | 'created_at'>): Promise<number> => {
+  try {
+    const database = await getDatabase();
+    const result = await database.runAsync(
+      `INSERT INTO users (name, email, password) VALUES (?, ?, ?)`,
+      [user.name, user.email.toLowerCase(), user.password]
+    );
+    return result.lastInsertRowId;
+  } catch (error) {
+    console.error('Error adding user:', error);
+    throw error;
+  }
+};
+
+/**
+ * READ - Ambil user berdasarkan email
+ * @param email - Email user
+ */
+export const getUserByEmail = async (email: string): Promise<User | null> => {
+  try {
+    const database = await getDatabase();
+    const result = await database.getFirstAsync<User>(
+      `SELECT * FROM users WHERE email = ?`,
+      [email.toLowerCase()]
+    );
+    return result || null;
+  } catch (error) {
+    console.error('Error getting user by email:', error);
+    throw error;
+  }
+};
+
+/**
+ * AUTHENTICATE - Validasi kredensial sederhana
+ * @returns User jika sukses, null jika gagal
+ */
+export const authenticateUser = async (
+  email: string,
+  password: string
+): Promise<User | null> => {
+  try {
+    const user = await getUserByEmail(email);
+    if (!user) {
+      return null;
+    }
+    return user.password === password ? user : null;
+  } catch (error) {
+    console.error('Error authenticating user:', error);
+    throw error;
+  }
+};
+
+/**
+ * DELETE - Hapus user (opsional)
+ */
+export const deleteUser = async (id: number): Promise<void> => {
+  try {
+    const database = await getDatabase();
+    await database.runAsync(`DELETE FROM users WHERE id = ?`, [id]);
+  } catch (error) {
+    console.error('Error deleting user:', error);
     throw error;
   }
 };
